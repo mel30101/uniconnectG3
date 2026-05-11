@@ -1,0 +1,35 @@
+{
+  "name": "social-service",
+  "version": "1.0.0",
+  "description": "Servicio de gestión de grupos y eventos - UniConnect",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "test": "cross-env NODE_ENV=test jest --forceExit --detectOpenHandles",
+    "test:verbose": "cross-env NODE_ENV=test jest --verbose --forceExit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^1.15.2",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "firebase-admin": "^13.7.0",
+    "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "globalSetup": "./jest.setup.js",
+    "socket.io": "^4.8.3",
+    "axios": "^1.6.8"
+  }
+}

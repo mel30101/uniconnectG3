@@ -1,0 +1,60 @@
+{
+  "name": "@uniconnect/shared",
+  "version": "1.0.0",
+  "description": "Shared business logic for UniConnect mobile and web apps",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/types/index.js"
+    },
+    "./api": {
+      "types": "./dist/api/index.d.ts",
+      "import": "./dist/api/index.js"
+    },
+    "./stores": {
+      "types": "./dist/stores/index.d.ts",
+      "import": "./dist/stores/index.js"
+    },
+    "./utils": {
+      "types": "./dist/utils/index.d.ts",
+      "import": "./dist/utils/index.js"
+    },
+    "./validators": {
+      "types": "./dist/validators/index.d.ts",
+      "import": "./dist/validators/index.js"
+    },
+    "./navigation": {
+      "types": "./dist/navigation/useAppNavigation.d.ts",
+      "import": "./dist/navigation/useAppNavigation.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "axios": "^1.13.6",
+    "date-fns": "^4.1.0",
+    "firebase": "^12.9.0",
+    "socket.io-client": "^4.8.3",
+    "zod": "^3.23.8",
+    "zustand": "^5.0.11"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "~5.9.2"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0"
+  }
+}

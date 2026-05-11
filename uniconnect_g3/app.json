@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "uniconnect_g3",
+    "slug": "uniconnect_g3",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "uniconnectg3",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.melodyceballos.uniconnectg3"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "softwareKeyboardLayoutMode": "resize",
+      "edgeToEdgeEnabled": true,
+      "package": "com.melodyceballos.uniconnectg3"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4e328683-f92d-403e-9ffe-00e09f6c6e61"
+      }
+    },
+    "owner": "melodyceballos",
+    "updates": {
+      "url": "https://u.expo.dev/4e328683-f92d-403e-9ffe-00e09f6c6e61"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
+  }
+}

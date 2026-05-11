@@ -1,0 +1,4 @@
+packages:
+  - 'packages/*'
+  - 'uniconnect_web'
+  - 'uniconnect_g3'
