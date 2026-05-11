@@ -10,7 +10,7 @@ class SendGroupMessage {
     this.groupMessageRepo = groupMessageRepo;
     this.groupMemberRepo = groupMemberRepo;
     this.cloudinaryService = cloudinaryService;
-    
+
     // Inicializamos la cadena de validación
     this.validationChain = ValidationChainFactory.createGroupMessageChain(this.groupMemberRepo);
   }
@@ -18,15 +18,15 @@ class SendGroupMessage {
   async execute(groupId, senderId, messageData, file = null) {
     // 1. Ejecutar Cadena de Responsabilidad (Validación y Detección de Menciones)
     // Criterio 5: Validar antes de gastar memoria o recursos externos
-    const validationRequest = { 
-      groupId, 
-      senderId, 
-      text: messageData.text, 
-      file 
+    const validationRequest = {
+      groupId,
+      senderId,
+      text: messageData.text,
+      file
     };
-    
+
     const validationResult = await this.validationChain.manejar(validationRequest);
-    
+
     if (!validationResult.esValido) {
       const error = new Error(validationResult.error);
       error.codigo = validationResult.codigo;
@@ -64,7 +64,7 @@ class SendGroupMessage {
     });
 
     // 4. Aplicar Decoradores (Modularmente)
-    
+
     // 4a. Decorador de Archivo (si aplica)
     if (type === 'file' && fileUrl) {
       message = new MensajeConArchivo(message, {
@@ -84,26 +84,14 @@ class SendGroupMessage {
 
     // 5. Guardar en Base de Datos
     const messageJson = message.toJSON();
-    
-    // US-CH01: El backend es la única fuente de verdad para el marcado de menciones
-    if (validationRequest.renderedText) {
-      messageJson.renderedContent = validationRequest.renderedText;
-    }
-    
+
     // US-CH01: El backend es la única fuente de verdad para el marcado de menciones
     if (validationRequest.renderedText) {
       messageJson.renderedContent = validationRequest.renderedText;
     }
 
     const messageId = await this.groupMessageRepo.create(groupId, messageJson);
-    
-    const result = {
-      messageId,
-      ...messageJson
-    };
 
-    const messageId = await this.groupMessageRepo.create(groupId, messageJson);
-    
     const result = {
       messageId,
       ...messageJson

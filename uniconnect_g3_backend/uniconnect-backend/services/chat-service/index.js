@@ -110,10 +110,10 @@ const formatMessageDTO = (msg) => {
   // Manejamos casos donde msg puede venir del Use Case o directamente de la DB
   const id = msg.id || msg.messageId || `temp_${Date.now()}`;
   const createdAt = msg.createdAt;
-  
+
   // Si createdAt es un Timestamp de Firebase, lo convertimos a ISO
-  const timestamp = (createdAt && typeof createdAt.toDate === 'function') 
-    ? createdAt.toDate().toISOString() 
+  const timestamp = (createdAt && typeof createdAt.toDate === 'function')
+    ? createdAt.toDate().toISOString()
     : (createdAt instanceof Date ? createdAt.toISOString() : new Date().toISOString());
 
   return {
@@ -150,7 +150,7 @@ io.on('connection', async (socket) => {
   // 1. PRESENCIA SEGMENTADA POR GRUPOS (US-W06 C5)
   activeUsers.set(userId, socket.id);
   socket.join(`user_${userId}`);
-  
+
   // Notificar solo a los grupos del usuario
   try {
     const groupIds = await groupMemberRepo.getGroupsByUserId(userId);
@@ -210,12 +210,12 @@ io.on('connection', async (socket) => {
   socket.on('get_mention_suggestions', async ({ groupId, query }, callback) => {
     try {
       let members = await groupMemberRepo.getGroupMembersWithNames(groupId);
-      
+
       // Filtrar por query si existe
       if (query) {
         const q = query.toLowerCase();
-        members = members.filter(m => 
-          (m.name && m.name.toLowerCase().includes(q)) || 
+        members = members.filter(m =>
+          (m.name && m.name.toLowerCase().includes(q)) ||
           (m.id && m.id.toLowerCase().includes(q))
         );
       } else {
@@ -272,11 +272,11 @@ io.on('connection', async (socket) => {
   socket.on('send_private_message', async (rawPayload, callback) => {
     let payload = rawPayload;
     if (typeof rawPayload === 'string') {
-      try { payload = JSON.parse(rawPayload); } catch (e) {}
+      try { payload = JSON.parse(rawPayload); } catch (e) { }
     }
 
     const { chatId, senderId, receiverId, text, file } = payload || {};
-    
+
     if (!chatId || !senderId || (!text && !file)) {
       if (callback) callback({ success: false, error: 'Campos requeridos faltantes para chat privado' });
       return;
@@ -285,12 +285,12 @@ io.on('connection', async (socket) => {
     try {
       const messageData = file ? { type: 'file', fileUrl: file.url, fileName: file.name, text } : { type: 'text', text };
       const result = await sendMessageUC.execute(chatId, senderId, messageData);
-      
+
       const responseData = formatMessageDTO(result);
 
       // 1. Emitir a la sala privada (si están dentro)
       socketService.emitToChat(`room_private_${chatId}`, 'receive_private_message', responseData);
-      
+
       // 2. ECO A SALA PERSONAL (Multi-dispositivo)
       socketService.emitToChat(`user_${senderId}`, 'receive_private_message', responseData);
 
@@ -302,7 +302,7 @@ io.on('connection', async (socket) => {
       if (callback) callback({ success: true, data: responseData });
     } catch (error) {
       console.error('[Socket Debug] ❌ ERROR en flujo send_private_message:', error);
-      
+
       const errorDTO = formatErrorDTO(error);
       socket.emit('error_message', errorDTO);
 
@@ -319,14 +319,14 @@ io.on('connection', async (socket) => {
       const messages = await messageRepo.findWithPagination(chatId, limit, lastMessageId);
       const formattedMessages = messages.map(formatMessageDTO);
       const newLastId = formattedMessages.length > 0 ? formattedMessages[0].message_id : null;
-      
+
       // Lógica hasMore: Si el número de mensajes es igual al límite, hay más
       const hasMore = messages.length === limit;
 
-      if (callback) callback({ 
-        messages: formattedMessages, 
+      if (callback) callback({
+        messages: formattedMessages,
         lastMessageId: newLastId,
-        hasMore 
+        hasMore
       });
     } catch (error) {
       console.error("[Socket Debug] ❌ Error obteniendo historial privado:", error);
@@ -361,10 +361,10 @@ io.on('connection', async (socket) => {
       const newLastId = formattedMessages.length > 0 ? formattedMessages[0].message_id : null;
       const hasMore = messages.length === limit;
 
-      if (callback) callback({ 
-        messages: formattedMessages, 
+      if (callback) callback({
+        messages: formattedMessages,
         lastMessageId: newLastId,
-        hasMore 
+        hasMore
       });
     } catch (error) {
       console.error("[Socket Debug] ❌ Error historial grupal:", error);
@@ -427,8 +427,6 @@ io.on('connection', async (socket) => {
         callback({ success: true, data: responseData });
       }
 
-      console.log(`[Socket Debug] 5. Flujo completado (Notificación delegada al Use Case)`);
-
     } catch (error) {
       console.error('[Socket Debug] ❌ ERROR en flujo send_message:', error);
       const errorDTO = formatErrorDTO(error);
@@ -442,7 +440,7 @@ io.on('connection', async (socket) => {
     // Limpiar presencia y emitir estado offline segmentado
     if (activeUsers.get(userId) === socket.id) {
       activeUsers.delete(userId);
-      
+
       try {
         const groupIds = await groupMemberRepo.getGroupsByUserId(userId);
         groupIds.forEach(gid => {
