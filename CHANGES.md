@@ -1,5 +1,44 @@
 # CHANGES
 
+## [FIX] Errores críticos de arranque en Mobile (Android)
+
+**Fecha:** 2026-05-12
+
+### Error: Invalid hook call / Multiple React versions
+**Síntoma:** Crash al iniciar la app con "TypeError: Cannot read property 'useCallback' of null" en `RootLayoutInner`.
+
+**Causa:** Conflicto de resolución de dependencias en el monorepo. Metro detectaba múltiples instancias de React (una en `uniconnect_g3/node_modules` y otra potencialmente desde `@uniconnect/shared`), rompiendo el contexto de los Hooks.
+
+**Solución:** 
+- Configuración de `resolver.extraNodeModules` en `metro.config.js` para forzar single-instance de React, React Native y Zustand desde `node_modules` de mobile
+- Agregado `watchFolders` y `nodeModulesPaths` para resolver correctamente el monorepo
+
+### Error: Firebase Auth Persistence
+**Síntoma:** Advertencia "You are initializing Firebase Auth for React Native without providing AsyncStorage". Los usuarios tenían que loguearse cada vez que cerraban la app.
+
+**Causa:** Falta de AsyncStorage en el entorno de React Native. Firebase Auth requiere un storage adapter para persistir sesiones.
+
+**Solución:** 
+- Instalación de `@react-native-async-storage/async-storage`
+- Actualización de `FirebaseClient.ts` para usar `initializeAuth` con `getReactNativePersistence(AsyncStorage)`
+
+### Error: @uniconnect/shared Resolution Warnings
+**Síntoma:** Metro advertía "however no match was resolved for this request (platform = android). Falling back to file-based resolution."
+
+**Causa:** El `package.json` de `@uniconnect/shared` usaba el campo "exports" sin especificar entradas para `react-native` y `default`, causando conflictos con la resolución de módulos de Metro.
+
+**Solución:** 
+- Ajuste en los exports del `package.json` de shared para incluir `react-native` y `default` en cada entrada
+- Rebuild del paquete compartido
+
+**Archivos modificados:**
+- `uniconnect_g3/metro.config.js` - Configuración de resolución de módulos
+- `uniconnect_g3/src/data/sources/FirebaseClient.ts` - Persistencia de Firebase Auth
+- `packages/shared/package.json` - Exports con react-native y default
+- `uniconnect_g3/package.json` - Dependencia AsyncStorage agregada
+
+---
+
 ## [FIX] Presencia — _layout mobile y chatConnected reactivo web
 
 **Fecha:** 2026-05-12
