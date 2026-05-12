@@ -1,5 +1,28 @@
 # CHANGES
 
+## [FIX] Presencia — "Desconectado" aunque usuario está activo
+
+**Fecha:** 2026-05-11
+
+**Causa encontrada:** Causa C + Causa A combinadas.
+- **Causa C**: `SocketContext.tsx` usaba `useRef` para almacenar los sockets. El `Provider` renderizaba con `null` (valor inicial del ref), luego el `useEffect` creaba el socket y asignaba `ref.current`, pero sin causar re-render. Los consumidores de `useChatSocket()` nunca recibían el socket real, el `useEffect` de `useOtherPresence` salía por el guard `if (!chatSocket)` y nunca volvía a correr.
+- **Causa A**: incluso con el socket disponible, `check_user_status` podía emitirse antes de que el socket terminara de conectar, perdiendo el callback.
+
+**Fix aplicado:**
+- `SocketContext.tsx`: `useRef` → `useState`. El socket se expone al estado solo en el evento `'connect'`, forzando re-render de todos los consumidores.
+- `usePresence.ts` (web y mobile): `queryStatus` se ejecuta inmediatamente si `socket.connected`, o espera `once('connect')` si no.
+- `useChatSocket.ts` (mobile): refactorizado con patrón pub/sub (`Set` de listeners) para notificar a todos los componentes que usan el hook cuando el socket singleton conecta/desconecta.
+
+**Archivos modificados:**
+- `uniconnect_web/src/context/SocketContext.tsx`
+- `uniconnect_web/src/hooks/usePresence.ts`
+- `uniconnect_g3/src/presentation/hooks/useChatSocket.ts`
+- `uniconnect_g3/src/presentation/hooks/usePresence.ts`
+
+---
+
+
+
 ## [REFACTOR] Presencia online — migración a WebSocket del backend
 
 **Fecha:** 2026-05-11  
