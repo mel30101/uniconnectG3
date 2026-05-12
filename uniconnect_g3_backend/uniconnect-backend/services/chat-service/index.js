@@ -50,6 +50,7 @@ const addGroupReactionUC = new AddGroupReaction(groupMessageRepo, socketService)
 const chatSubject = require('./src/application/observer/ChatSubject');
 const { ChatEvents } = require('./src/domain/observer/ISubject');
 const GroupChatObserver = require('./src/infrastructure/observers/GroupChatObserver');
+const MentionNotificationObserver = require('./src/infrastructure/observers/MentionNotificationObserver');
 
 // Controllers
 const ChatController = require('./src/infrastructure/http/controllers/chatController');
@@ -101,6 +102,10 @@ const io = new Server(server, {
 // Registrar Observadores (Tarea 3)
 const groupChatObserver = new GroupChatObserver(io);
 chatSubject.attach(groupChatObserver);
+
+// US-M03: Puente con NotificationService para Menciones
+const mentionObserver = new MentionNotificationObserver(db);
+chatSubject.attach(mentionObserver);
 
 // --- PRESENCE TRACKER ---
 const activeUsers = new Map();
@@ -162,6 +167,21 @@ io.on('connection', async (socket) => {
     console.error("[Socket] Error notificando presencia segmentada:", err);
     // Fallback global solo si falla lo anterior (opcional)
     io.emit('USER_STATUS_CHANGED', { userId, status: 'online' });
+  }
+
+  // 1b. PRESENCIA 1 A 1 (DIFUSIÓN PROACTIVA)
+  try {
+    const chats = await chatRepo.findByUserId(userId);
+    chats.forEach(chat => {
+      const otherId = chat.participants.find(p => p !== userId);
+      if (otherId && activeUsers.has(otherId)) {
+        // Notificar al otro participante (a su habitación personal)
+        io.to(`user_${otherId}`).emit('USER_STATUS_CHANGED', { userId, status: 'online' });
+      }
+    });
+    console.log(`[Socket] Presencia 1 a 1: Notificado online a ${chats.length} contactos.`);
+  } catch (err) {
+    console.error("[Socket] Error notificando presencia 1 a 1:", err);
   }
 
   // Evento para consultar el estado de un usuario específico
@@ -450,6 +470,20 @@ io.on('connection', async (socket) => {
       } catch (err) {
         console.error("[Socket] Error notificando offline segmentado:", err);
         io.emit('USER_STATUS_CHANGED', { userId, status: 'offline' });
+      }
+
+      // 2b. PRESENCIA 1 A 1 (OFFLINE)
+      try {
+        const chats = await chatRepo.findByUserId(userId);
+        chats.forEach(chat => {
+          const otherId = chat.participants.find(p => p !== userId);
+          if (otherId && activeUsers.has(otherId)) {
+            io.to(`user_${otherId}`).emit('USER_STATUS_CHANGED', { userId, status: 'offline' });
+          }
+        });
+        console.log(`[Socket] Presencia 1 a 1: Notificado offline a ${chats.length} contactos.`);
+      } catch (err) {
+        console.error("[Socket] Error notificando offline 1 a 1:", err);
       }
     }
   });

@@ -4,7 +4,7 @@ class FirestoreNotificationRepository {
   }
 
   async save(notification) {
-    const data = notification.toFirestore();
+    const data = typeof notification.toFirestore === 'function' ? notification.toFirestore() : notification;
     const docRef = this.db.collection('notifications').doc();
     await docRef.set(data);
     return docRef.id;
