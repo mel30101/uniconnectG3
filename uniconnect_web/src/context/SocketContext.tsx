@@ -6,16 +6,19 @@ import { useMyPresence } from '../hooks/usePresence';
 interface SocketContextType {
   notifSocket: Socket | null;
   chatSocket: Socket | null;
+  chatConnected: boolean;
 }
 
 const SocketContext = createContext<SocketContextType>({
   notifSocket: null,
   chatSocket: null,
+  chatConnected: false,
 });
 
 export function SocketProvider({ children }: { children: ReactNode }) {
   const [notifSocket, setNotifSocket] = useState<Socket | null>(null);
   const [chatSocket, setChatSocket] = useState<Socket | null>(null);
+  const [chatConnected, setChatConnected] = useState(false);
   const { user } = authStore();
 
   useEffect(() => {
@@ -44,6 +47,11 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     cs.on('connect', () => {
       console.log('[ChatSocket] Conectado al chat-service');
       setChatSocket(cs);
+      setChatConnected(true);
+    });
+    cs.on('disconnect', () => {
+      console.log('[ChatSocket] Desconectado');
+      setChatConnected(false);
     });
     cs.on('connect_error', (err) => console.warn('[ChatSocket] Error:', err.message));
 
@@ -52,13 +60,14 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       cs.disconnect();
       setNotifSocket(null);
       setChatSocket(null);
+      setChatConnected(false);
     };
   }, [user?.uid]);
 
   useMyPresence();
 
   return (
-    <SocketContext.Provider value={{ notifSocket, chatSocket }}>
+    <SocketContext.Provider value={{ notifSocket, chatSocket, chatConnected }}>
       {children}
     </SocketContext.Provider>
   );
@@ -66,4 +75,5 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
 export const useNotifSocket = () => useContext(SocketContext).notifSocket;
 export const useChatSocket = () => useContext(SocketContext).chatSocket;
+export const useChatConnected = () => useContext(SocketContext).chatConnected;
 export const useSocket = () => useContext(SocketContext).chatSocket;

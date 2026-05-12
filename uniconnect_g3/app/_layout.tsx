@@ -14,7 +14,7 @@ function NotificationListener() {
   return null;
 }
 
-export default function RootLayout() {
+function RootLayoutInner() {
   const user = authStore((state) => state.user);
   const [hasHydrated, setHasHydrated] = useState(false);
 
@@ -82,4 +82,8 @@ export default function RootLayout() {
       </Stack>
     </NotificationProvider>
   );
+}
+
+export default function RootLayout() {
+  return <RootLayoutInner />;
 }

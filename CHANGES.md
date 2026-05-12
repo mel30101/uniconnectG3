@@ -1,5 +1,34 @@
 # CHANGES
 
+## [FIX] Presencia — _layout mobile y chatConnected reactivo web
+
+**Fecha:** 2026-05-12
+
+### Bug Mobile: "Invalid hook call" en _layout.tsx
+**Síntoma:** Crash al iniciar la app con error "Cannot read property 'useCallback' of null" apuntando a `RootLayout(./_layout.tsx)`.
+
+**Causa:** El componente `RootLayout` exportado directamente llamaba hooks de Zustand (`authStore((state) => state.user)`) en un contexto donde React aún no estaba completamente inicializado. Expo Router puede ejecutar el componente raíz antes de que el árbol de React esté listo.
+
+**Fix:** Envolver todo el contenido de `RootLayout` en un componente hijo `RootLayoutInner`. El componente raíz exportado ahora solo renderiza `<RootLayoutInner />`, garantizando que React esté completamente inicializado antes de ejecutar los hooks.
+
+### Bug Web: presencia no actualiza en tiempo real
+**Síntoma:** Cuando un usuario se conecta, el indicador de presencia no cambia a "En línea" hasta recargar la página o cambiar de chat.
+
+**Causa:** `SocketContext` exponía `chatSocket` como estado, pero la referencia del objeto socket no cambia cuando conecta/desconecta — solo cambia su estado interno `.connected`. El `useEffect` en `usePresence` con dependencia `[chatSocket]` no se re-ejecutaba porque React no detectaba cambio en la referencia.
+
+**Fix:** 
+- `SocketContext` ahora expone `chatConnected` (boolean) como estado reactivo separado
+- Se actualiza en los eventos `connect`/`disconnect` del socket
+- `usePresence` usa `chatConnected` como dependencia en lugar de `socketConnected` local
+- Nuevo hook `useChatConnected()` exportado desde `SocketContext`
+
+**Archivos modificados:**
+- `uniconnect_g3/app/_layout.tsx` - Componente raíz envuelto en hijo
+- `uniconnect_web/src/context/SocketContext.tsx` - Estado `chatConnected` reactivo
+- `uniconnect_web/src/hooks/usePresence.ts` - Usa `chatConnected` del contexto
+
+---
+
 ## [FIX] Presencia — actualización en tiempo real y crash mobile
 
 **Fecha:** 2026-05-12
