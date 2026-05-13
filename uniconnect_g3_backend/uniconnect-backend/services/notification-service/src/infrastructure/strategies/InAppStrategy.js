@@ -11,8 +11,12 @@ class InAppStrategy extends INotificacionStrategy {
     try {
       console.log(`[InAppStrategy] Persisting notification for user ${notification.userId}`);
       
-      // La lógica actual ya formatea el DTO antes de guardar
-      const result = await this.notificationRepo.save(notification);
+      // Manejar tanto la instancia de la entidad como el DTO plano
+      const data = typeof notification.toFirestore === 'function' 
+        ? notification.toFirestore() 
+        : (typeof notification.getDTO === 'function' ? notification.getDTO() : notification);
+
+      const result = await this.notificationRepo.save(data);
       
       return {
         canal: 'in_app',

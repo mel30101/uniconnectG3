@@ -23,6 +23,14 @@ class FirestoreChatRepository{
       updatedAt: new Date()
     }, { merge: true });
   }
+
+  async findByUserId(userId) {
+    const snapshot = await this.db.collection('chats')
+      .where('participants', 'array-contains', userId)
+      .get();
+    
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
 }
 
 module.exports = FirestoreChatRepository;
