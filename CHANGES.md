@@ -1,5 +1,84 @@
 # CHANGES
 
+## [DEBUG] Presencia en línea — logs de diagnóstico
+
+**Fecha:** 2026-05-13
+
+### Análisis del Backend Actualizado
+
+El backend (`chat-service/index.js`) ahora implementa presencia para chats 1-a-1:
+
+**Al conectar un usuario:**
+```javascript
+// Línea ~145: Se une a su room personal
+socket.join(`user_${userId}`);
+
+// Línea ~165-175: Notifica a contactos 1-a-1
+const chats = await chatRepo.findByUserId(userId);
+chats.forEach(chat => {
+  const otherId = chat.participants.find(p => p !== userId);
+  if (otherId && activeUsers.has(otherId)) {
+    io.to(`user_${otherId}`).emit('USER_STATUS_CHANGED', { userId, status: 'online' });
+  }
+});
+```
+
+**Al desconectar:**
+```javascript
+// Línea ~470-480: Notifica offline a contactos 1-a-1
+const chats = await chatRepo.findByUserId(userId);
+chats.forEach(chat => {
+  const otherId = chat.participants.find(p => p !== userId);
+  if (otherId && activeUsers.has(otherId)) {
+    io.to(`user_${otherId}`).emit('USER_STATUS_CHANGED', { userId, status: 'offline' });
+  }
+});
+```
+
+**Evento disponible:**
+- `check_user_status` (request/response) - Consulta estado actual de un usuario
+- `USER_STATUS_CHANGED` (broadcast) - Emitido a `user_${otherId}` cuando un contacto cambia de estado
+
+### Implementación Actual del Frontend
+
+**Web:**
+- Socket conecta a puerto 3004 con `query: { userId }`
+- Se une automáticamente a `user_${userId}` (backend lo hace en el handshake)
+- Hook `useOtherPresence` escucha `USER_STATUS_CHANGED`
+- Usa `chatConnected` como dependencia reactiva
+
+**Mobile:**
+- Socket conecta a puerto 3004 con `query: { userId }`
+- Se une automáticamente a `user_${userId}` (backend lo hace en el handshake)
+- Hook `useOtherPresence` escucha `USER_STATUS_CHANGED`
+- Usa `socketConnected` como dependencia reactiva
+
+### Logs de Diagnóstico Agregados
+
+Se agregaron logs temporales en ambos hooks para identificar el caso:
+
+- `[Presencia WEB/MOBILE] socket conectado: <id>` - Confirma que el socket está conectado
+- `[Presencia WEB/MOBILE] emitiendo check_user_status para: <userId>` - Confirma que se consulta el estado inicial
+- `[Presencia WEB/MOBILE] check_user_status response: <payload>` - Muestra la respuesta del backend
+- `[Presencia WEB/MOBILE] USER_STATUS_CHANGED recibido: <payload>` - Confirma que el evento llega en tiempo real
+
+### Próximos Pasos
+
+1. Probar en web y mobile con los logs activos
+2. Identificar cuál de estos casos aplica:
+   - **Caso A:** Socket no conecta (no aparece log de "socket conectado")
+   - **Caso B:** Socket conecta pero evento no llega (no aparece log de "USER_STATUS_CHANGED recibido")
+   - **Caso C:** Evento llega pero UI no actualiza (log aparece pero indicador no cambia)
+   - **Caso D:** Payload diferente al esperado (log muestra campos distintos)
+3. Aplicar fix según el caso encontrado
+4. Eliminar logs de diagnóstico
+
+**Archivos modificados:**
+- `uniconnect_web/src/hooks/usePresence.ts` - Logs de diagnóstico
+- `uniconnect_g3/src/presentation/hooks/usePresence.ts` - Logs de diagnóstico
+
+---
+
 ## [FIX] Errores críticos de arranque en Mobile (Android)
 
 **Fecha:** 2026-05-12

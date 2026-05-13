@@ -31,13 +31,18 @@ export function useOtherPresence(otherUserId: string | null) {
   useEffect(() => {
     if (!otherUserId || !chatSocket || !socketConnected) return;
 
+    console.log('[Presencia MOBILE] socket conectado:', chatSocket.id);
+    console.log('[Presencia MOBILE] emitiendo check_user_status para:', otherUserId);
+
     // Consulta estado inicial
     chatSocket.emit('check_user_status', { userId: otherUserId }, (res: any) => {
+      console.log('[Presencia MOBILE] check_user_status response:', res);
       setIsOnline(res?.status === 'online');
     });
 
     // Listener en tiempo real
     const handler = (data: { userId: string; status: string }) => {
+      console.log('[Presencia MOBILE] USER_STATUS_CHANGED recibido:', data);
       if (data.userId === otherUserId) setIsOnline(data.status === 'online');
     };
     chatSocket.on('USER_STATUS_CHANGED', handler);
