@@ -13,7 +13,16 @@ class ValidarTamanoHandler extends BaseHandler {
   }
 
   async manejar(request) {
-    const { text } = request;
+    const { text, mensajeDecorado } = request;
+
+    // Verificar si el mensaje decorado tiene metadatos de archivo (Criterio: Validar sobre mensaje ya decorado)
+    let hasFile = false;
+    if (mensajeDecorado && typeof mensajeDecorado.getMetadata === 'function') {
+      const metadata = mensajeDecorado.getMetadata();
+      if (metadata && metadata.url) {
+        hasFile = true;
+      }
+    }
 
     if (text && text.length > this.maxSize) {
       return this.retornarError(
@@ -22,7 +31,14 @@ class ValidarTamanoHandler extends BaseHandler {
       );
     }
 
-    // Si el texto es válido o si no hay texto (solo archivo), continuamos
+    // Validar que el mensaje no esté completamente vacío
+    if (!text && !hasFile) {
+      return this.retornarError(
+        'El mensaje no puede estar vacío',
+        'MESSAGE_EMPTY'
+      );
+    }
+
     return await super.manejar(request);
   }
 }
