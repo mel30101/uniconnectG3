@@ -12,9 +12,11 @@ class PrioridadDecorator extends NotificacionDecorator {
 
   getDTO() {
     const dto = super.getDTO();
+    const weights = { critica: 3, urgente: 2, normal: 1 };
     return {
       ...dto,
-      priority: this.priority
+      priority: this.priority,
+      priorityWeight: weights[this.priority] || 1
     };
   }
 }
