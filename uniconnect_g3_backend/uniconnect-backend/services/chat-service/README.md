@@ -142,28 +142,32 @@ classDiagram
 sequenceDiagram
     participant C as Socket/Controller
     participant UC as SendGroupMessage
+    participant Dec as Decorators (Adjuntos/Menciones)
     participant F as ValidationChainFactory
     participant Chain as Cadena de Validación
     participant DB as Firestore
     participant Sub as ChatSubject
 
     C->>UC: execute(msgData)
+    
+    Note over UC: Paso 1: Decoración (Criterio 5)
+    UC->>Dec: Aplicar Decoradores (File/Mention)
+    Dec-->>UC: Mensaje Decorado (Objeto de Dominio)
+
     UC->>F: createGroupMessageChain()
     F-->>UC: cadenaEnsamblada
-    UC->>Chain: manejar(request)
+    
+    Note over UC: Paso 2: Validación del Objeto Decorado
+    UC->>Chain: manejar(request + mensajeDecorado)
     Chain->>Chain: Validar Campos
+    Chain->>Chain: Validar Tamano (Incluye adjunto)
     Chain->>Chain: Validar Permisos
-    Chain->>Chain: Validar Menciones (Inyecta data)
-    Chain-->>UC: { esValido: true }
+    Chain-->>UC: { esValido: true, mensaje: msgDecorado }
     
-    Note over UC: Si es válido, procede con Cloudinary (si aplica)
-    
+    Note over UC: Paso 3: Persistencia y Notificación
     UC->>DB: create(message)
     DB-->>UC: messageId
-    
     UC->>Sub: notify(NUEVO_MENSAJE, data)
-    Sub->>UC: Update Observers
-    
     UC-->>C: result (Success)
 ```
 
@@ -187,8 +191,9 @@ sequenceDiagram
 
 ### Beneficios Técnicos:
 *   **Limpieza de Código**: Se eliminaron bloques `if/else` anidados en los casos de uso.
-*   **Optimización de Recursos**: Se validan los permisos y el tamaño **antes** de realizar operaciones costosas como subidas a la nube.
+*   **Integridad de Datos (Criterio 5)**: Se garantiza que la cadena de responsabilidad valide el objeto de dominio ya enriquecido por los decoradores. Esto permite que el ValidarTamanoHandler considere metadatos de archivos adjuntos, asegurando que ninguna regla de negocio sea burlada tras la decoración.
 *   **Extensibilidad**: Para añadir una nueva validación (ej. `ValidarAntiSpamAvanzado`), solo se requiere crear el handler y añadirlo a la `ValidationChainFactory` sin tocar la lógica de negocio del chat.
+*   **Handler de Éxito**: El sistema no solo retorna un booleano; la cadena devuelve el objeto de mensaje validado y procesado, asegurando que el orquestador trabaje siempre con la versión final y segura del dato.
 
 ---
 *Documentación actualizada para la US-CH01 - Sprint 4.*
