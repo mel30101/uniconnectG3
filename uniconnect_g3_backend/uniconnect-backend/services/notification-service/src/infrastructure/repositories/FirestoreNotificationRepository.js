@@ -13,6 +13,7 @@ class FirestoreNotificationRepository {
   async findByUserId(userId, limit = 20) {
     const snapshot = await this.db.collection('notifications')
       .where('userId', '==', userId)
+      .orderBy('priorityWeight', 'desc')
       .orderBy('createdAt', 'desc')
       .limit(limit)
       .get();
