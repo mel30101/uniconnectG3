@@ -46,20 +46,25 @@ class GetGroupById {
       }
     }
 
-    const SolicitudIngresoState = require('../../../domain/states/SolicitudIngresoState');
-    const MiembroAceptadoState = require('../../../domain/states/MiembroAceptadoState');
-    const TransferenciaAdminSolicitadaState = require('../../../domain/states/TransferenciaAdminSolicitadaState');
-    const MiembroRechazadoState = require('../../../domain/states/MiembroRechazadoState');
+    const Activo = require('../../../domain/states/Activo');
+    const PendienteTransferencia = require('../../../domain/states/PendienteTransferencia');
+    const TransferenciaAceptada = require('../../../domain/states/TransferenciaAceptada');
     
     class GroupContext {
       constructor(status, reqId) {
         this.requesterId = reqId;
         switch (status) {
-          case 'pending': this.state = new SolicitudIngresoState(null); break;
+          case 'pending': 
+            // Fallback since we deleted SolicitudIngresoState. 
+            // Using an anonymous object to avoid breaking the UI for pending users.
+            this.state = { getFriendlyName: () => 'Pendiente de Ingreso', isExitLocked: () => false }; 
+            break;
           case 'member':
-          case 'admin': this.state = new MiembroAceptadoState(null); break;
-          case 'transfer_pending': this.state = new TransferenciaAdminSolicitadaState(null); break;
-          case 'rejected': this.state = new MiembroRechazadoState(null); break;
+          case 'admin': this.state = new Activo(null); break;
+          case 'transfer_pending': this.state = new PendienteTransferencia(null); break;
+          case 'rejected': 
+            this.state = { getFriendlyName: () => 'Rechazado', isExitLocked: () => false }; 
+            break;
           default: this.state = null;
         }
       }
