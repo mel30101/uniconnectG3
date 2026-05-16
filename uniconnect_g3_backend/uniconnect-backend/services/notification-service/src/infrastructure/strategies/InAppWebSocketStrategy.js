@@ -1,15 +1,15 @@
 const INotificacionStrategy = require('../../domain/strategies/INotificacionStrategy');
 
-class InAppStrategy extends INotificacionStrategy {
+class InAppWebSocketStrategy extends INotificacionStrategy {
   constructor(notificationRepo) {
     super();
+    this.canal = 'inapp'; // Maintains compatibility with frontend/preferences
     this.notificationRepo = notificationRepo;
-    this.canal = 'in_app';
   }
 
   async enviar(notification) {
     try {
-      console.log(`[InAppStrategy] Persisting notification for user ${notification.userId}`);
+      console.log(`[InAppWebSocketStrategy] Persisting notification for user ${notification.userId}`);
       
       // Manejar tanto la instancia de la entidad como el DTO plano
       const data = typeof notification.toFirestore === 'function' 
@@ -19,14 +19,14 @@ class InAppStrategy extends INotificacionStrategy {
       const result = await this.notificationRepo.save(data);
       
       return {
-        canal: 'in_app',
+        canal: this.canal,
         enviado: true,
         id: result
       };
     } catch (error) {
-      console.error('[InAppStrategy] Error:', error.message);
+      console.error('[InAppWebSocketStrategy] Error:', error.message);
       return {
-        canal: 'in_app',
+        canal: this.canal,
         enviado: false,
         error: error.message
       };
@@ -34,4 +34,4 @@ class InAppStrategy extends INotificacionStrategy {
   }
 }
 
-module.exports = InAppStrategy;
+module.exports = InAppWebSocketStrategy;

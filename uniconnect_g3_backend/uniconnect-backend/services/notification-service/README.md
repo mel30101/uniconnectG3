@@ -27,7 +27,7 @@ classDiagram
         +enviar(notification)
     }
 
-    class InAppStrategy {
+    class InAppWebSocketStrategy {
         +enviar(notification)
     }
 
@@ -39,11 +39,20 @@ classDiagram
         +enviar(notification)
     }
 
+    class ResumenDiarioStrategy {
+        -db: Firestore
+        +enviar(notification)
+    }
+
     SendNotification o-- INotificacionStrategy : usa
-    INotificacionStrategy <|.. InAppStrategy
+    INotificacionStrategy <|.. InAppWebSocketStrategy
     INotificacionStrategy <|.. PushMovilStrategy
     INotificacionStrategy <|.. EmailInstitucionalStrategy
+    INotificacionStrategy <|.. ResumenDiarioStrategy
 ```
+
+### El Flujo de Resumen Diario (Cron Job)
+La **ResumenDiarioStrategy** funciona junto con un proceso programado (`dailySummaryJob.js`). En lugar de enviar la notificación de inmediato, la guarda en un buffer de Firestore (`daily_buffer`). A las 8:00 PM, el Cron Job consolida todas las notificaciones pendientes de un usuario, las envía en un solo mensaje, y realiza una limpieza atómica del buffer.
 
 ## Guía de Extensibilidad: Añadir un nuevo canal
 
@@ -65,7 +74,8 @@ Para añadir un nuevo canal (ej. `WhatsAppStrategy`), siga estos pasos sin modif
 2. **Inyectar la Estrategia:** En `index.js`, instancie la nueva clase y añádala al array de estrategias inyectadas en `SendNotification`.
    ```javascript
    const strategies = [
-     new InAppStrategy(...),
+     new InAppWebSocketStrategy(...),
+     new ResumenDiarioStrategy(...),
      new WhatsAppStrategy(), // ¡Listo!
    ];
    ```
