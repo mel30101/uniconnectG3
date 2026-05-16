@@ -6,7 +6,11 @@ class AccionDecorator extends NotificacionDecorator {
     if (!action || typeof action.label !== 'string' || typeof action.endpoint !== 'string') {
       throw new Error("El objeto action debe tener la estructura { label: string, endpoint: string }");
     }
-    this.action = action;
+    this.action = {
+      label: action.label,
+      endpoint: action.endpoint,
+      token: action.token || null
+    };
   }
 
   getDTO() {

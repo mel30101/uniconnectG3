@@ -1,6 +1,7 @@
 const Notification = require('../../domain/entities/Notification');
 const PrioridadDecorator = require('../../domain/decorators/PrioridadDecorator');
 const AccionDecorator = require('../../domain/decorators/AccionDecorator');
+const NotificationRules = require('../../domain/rules/NotificationRules');
 
 /**
  * Context class that coordinates multiple notification strategies.
@@ -19,6 +20,9 @@ class SendNotification {
       // 1. Get user preferences (Criterio 4 preparation)
       const preferences = await this.preferenceRepo.getPreferences(notificationData.userId);
       
+      // Determine rules based on type
+      const rule = NotificationRules[notificationData.type] || { priority: 'normal', requiresAction: false };
+      
       // 2. Prepare the processed DTO using current Decorator logic
       let notificacion = new Notification({
         ...notificationData,
@@ -26,11 +30,18 @@ class SendNotification {
         createdAt: new Date()
       });
 
-      if (notificationData.priority) {
-        notificacion = new PrioridadDecorator(notificacion, notificationData.priority);
-      }
+      // Apply automatic priority decorator based on catalog
+      notificacion = new PrioridadDecorator(notificacion, rule.priority);
 
-      if (notificationData.action) {
+      // Apply automatic action decorator if required by rule or if explicitly provided
+      if (rule.requiresAction) {
+        const actionData = notificationData.action || {
+          label: 'Ver Detalles',
+          endpoint: '/default-endpoint',
+          token: null
+        };
+        notificacion = new AccionDecorator(notificacion, actionData);
+      } else if (notificationData.action) {
         notificacion = new AccionDecorator(notificacion, notificationData.action);
       }
 
@@ -43,7 +54,13 @@ class SendNotification {
         // Criterio 4: Filtering based on preferences
         // We check if the channel is enabled globally for the user.
         // If event-specific overrides are added in the future, they would be checked here.
-        const isEnabled = preferences.enabledChannels[strategy.canal] ?? true;
+        let isEnabled = preferences.enabledChannels[strategy.canal] ?? true;
+        
+        // Override logic para notificaciones críticas
+        if (finalDTO.priority === 'critica') {
+          console.log(`[Notification] OVERRIDE: Priority is critica. Forcing dispatch via ${strategy.canal}`);
+          isEnabled = true;
+        }
         
         if (!isEnabled) {
           console.log(`[Notification] Channel ${strategy.canal} is disabled for user ${notificationData.userId}. Skipping.`);

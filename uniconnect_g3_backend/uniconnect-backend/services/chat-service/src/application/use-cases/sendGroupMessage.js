@@ -16,24 +16,7 @@ class SendGroupMessage {
   }
 
   async execute(groupId, senderId, messageData, file = null) {
-    // 1. Ejecutar Cadena de Responsabilidad (Validación y Detección de Menciones)
-    // Criterio 5: Validar antes de gastar memoria o recursos externos
-    const validationRequest = {
-      groupId,
-      senderId,
-      text: messageData.text,
-      file
-    };
-
-    const validationResult = await this.validationChain.manejar(validationRequest);
-
-    if (!validationResult.esValido) {
-      const error = new Error(validationResult.error);
-      error.codigo = validationResult.codigo;
-      throw error;
-    }
-
-    // 2. Si hay archivo y pasó la validación, subirlo a Cloudinary
+    // 1. Subir archivo a Cloudinary ANTES (Sacrificando eficiencia por requerimiento de diseño)
     let fileUrl = messageData.fileUrl || null;
     let fileName = messageData.fileName || null;
     let type = messageData.type || 'text';
@@ -54,7 +37,7 @@ class SendGroupMessage {
       }
     }
 
-    // 3. Crear instancia base del mensaje de grupo
+    // 2. Crear instancia base del mensaje de grupo
     let message = new GroupMessage({
       senderId,
       type,
@@ -63,9 +46,7 @@ class SendGroupMessage {
       fileName
     });
 
-    // 4. Aplicar Decoradores (Modularmente)
-
-    // 4a. Decorador de Archivo (si aplica)
+    // 3. Aplicar Decoradores (Modularmente) ANTES de la cadena
     if (type === 'file' && fileUrl) {
       message = new MensajeConArchivo(message, {
         url: fileUrl,
@@ -75,21 +56,59 @@ class SendGroupMessage {
       });
     }
 
-    // 4b. Decorador de Mención (Utilizando datos inyectados por la cadena)
-    // Criterio 4: Evitar re-procesamiento de menciones
-    const mentions = validationRequest.mentions || [];
-    if (mentions.length > 0) {
-      message = new MensajeConMencion(message, mentions);
+    // Extracción provisional de menciones para el decorador
+    const textStr = messageData.text || '';
+    const mentionRegex = /@(\w+)/g;
+    const matches = [...textStr.matchAll(mentionRegex)];
+    const rawMentions = matches.map(m => m[1]);
+    if (rawMentions.length > 0) {
+      message = new MensajeConMencion(message, rawMentions);
     }
 
-    // 5. Guardar en Base de Datos
-    const messageJson = message.toJSON();
+    // 4. Ejecutar Cadena de Responsabilidad (Validación) enviando el mensaje decorado
+    const validationRequest = {
+      groupId,
+      senderId,
+      text: messageData.text,
+      file,
+      mensajeDecorado: message
+    };
 
-    // US-CH01: El backend es la única fuente de verdad para el marcado de menciones
+    let validationResult;
+    try {
+      validationResult = await this.validationChain.manejar(validationRequest);
+      
+      // Aseguramos el formato de ResultadoValidacion
+      if (!validationResult.hasOwnProperty('mensaje')) {
+        validationResult.mensaje = message;
+      }
+    } catch (e) {
+      console.error('[SendGroupMessage] Excepción inesperada en la cadena de validación:', e);
+      throw new Error('Ocurrió un error interno durante la validación del mensaje');
+    }
+
+    if (!validationResult.esValido) {
+      const error = new Error(validationResult.error);
+      error.codigo = validationResult.codigo;
+      throw error;
+    }
+
+    // Usar el mensaje validado
+    const validMessage = validationResult.mensaje;
+    const messageJson = validMessage.toJSON();
+
+    // Inyectar menciones renderizadas por la cadena si existen
     if (validationRequest.renderedText) {
       messageJson.renderedContent = validationRequest.renderedText;
     }
+    if (validationRequest.mentions && validationRequest.mentions.length > 0) {
+      // Re-decorar o actualizar con los IDs correctos si es necesario, 
+      // pero como ya extrajimos rawMentions, confiaremos en los datos de la cadena
+      messageJson.metadata = messageJson.metadata || {};
+      messageJson.metadata.menciones = validationRequest.mentions;
+    }
 
+    // 5. Guardar en Base de Datos (Persistencia)
     const messageId = await this.groupMessageRepo.create(groupId, messageJson);
 
     const result = {
@@ -98,7 +117,6 @@ class SendGroupMessage {
     };
 
     // 6. Notificar a los Observadores (ChatSubject)
-    // Criterio: Cerrar el flujo notificando a los interesados tras la persistencia
     chatSubject.notify(ChatEvents.NUEVO_MENSAJE, {
       groupId,
       message: {
@@ -107,7 +125,7 @@ class SendGroupMessage {
         sender: { id: senderId },
         content: result.content,
         renderedContent: result.renderedContent,
-        metadata: result
+        metadata: result.metadata
       }
     });
 

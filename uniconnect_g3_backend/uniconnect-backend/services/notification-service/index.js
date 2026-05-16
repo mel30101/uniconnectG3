@@ -11,9 +11,10 @@ const FirestoreTokenRepository = require('./src/infrastructure/repositories/Fire
 const FirestorePreferenceRepository = require('./src/infrastructure/repositories/FirestorePreferenceRepository');
 
 // Strategies
-const InAppStrategy = require('./src/infrastructure/strategies/InAppStrategy');
+const InAppWebSocketStrategy = require('./src/infrastructure/strategies/InAppWebSocketStrategy');
 const PushMovilStrategy = require('./src/infrastructure/strategies/PushMovilStrategy');
 const EmailInstitucionalStrategy = require('./src/infrastructure/strategies/EmailInstitucionalStrategy');
+const ResumenDiarioStrategy = require('./src/infrastructure/strategies/ResumenDiarioStrategy');
 
 // Application
 const SendNotification = require('./src/application/use-cases/SendNotification');
@@ -46,9 +47,10 @@ const tokenRepo = new FirestoreTokenRepository(db);
 const preferenceRepo = new FirestorePreferenceRepository(db);
 
 const strategies = [
-  new InAppStrategy(notificationRepo),
+  new InAppWebSocketStrategy(notificationRepo),
   new PushMovilStrategy(tokenRepo),
-  new EmailInstitucionalStrategy()
+  new EmailInstitucionalStrategy(),
+  new ResumenDiarioStrategy(db)
 ];
 
 const sendNotificationUseCase = new SendNotification(strategies, preferenceRepo);
@@ -170,8 +172,12 @@ app.patch('/notifications/user/:userId/read-all', async (req, res) => {
   }
 });
 
+const { startDailySummaryJob } = require('./src/infrastructure/jobs/dailySummaryJob');
+
 server.listen(PORT, () => {
   console.log(`🔔 Notification Service (Dashboard) running on port ${PORT}`);
+  // Iniciamos el cron job del resumen diario
+  startDailySummaryJob();
 });
 
 module.exports = { notificationObserver };

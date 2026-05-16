@@ -26,7 +26,12 @@ class BaseHandler {
     if (this.siguiente) {
       return await this.siguiente.manejar(request);
     }
-    return { esValido: true, error: null, codigo: 'OK' };
+    return { 
+      esValido: true, 
+      error: null, 
+      codigo: 'OK', 
+      mensaje: request.mensajeDecorado || request.mensaje 
+    };
   }
 
   /**

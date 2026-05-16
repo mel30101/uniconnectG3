@@ -1,7 +1,7 @@
 const INotificacion = require('./INotificacion');
 
 class Notification extends INotificacion {
-  constructor({ id, userId, title, body, metadata = {}, type, status = 'unread', createdAt = new Date() }) {
+  constructor({ id, userId, title, body, metadata = {}, type, status = 'unread', priority = 'normal', createdAt = new Date() }) {
     super();
     this.id = id;
     this.userId = userId;
@@ -10,6 +10,7 @@ class Notification extends INotificacion {
     this.metadata = metadata; // { chatId, groupId, eventId, etc. }
     this.type = type; // 'chat', 'group', 'event'
     this.status = status; // 'read', 'unread'
+    this.priority = priority; // 'normal', 'urgente', 'critica'
     this.createdAt = createdAt;
   }
 
@@ -29,6 +30,8 @@ class Notification extends INotificacion {
       metadata: this.metadata,
       type: this.type,
       status: this.status,
+      priority: this.priority,
+      priorityWeight: { critica: 3, urgente: 2, normal: 1 }[this.priority] || 1,
       createdAt: this.createdAt
     };
   }
