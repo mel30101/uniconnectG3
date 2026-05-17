@@ -1,4 +1,13 @@
 class LoggerSingleton {
+  private static instance: LoggerSingleton;
+  private levels!: {
+    INFO: string;
+    DEBUG: string;
+    WARNING: string;
+    ERROR: string;
+    CRITICAL: string;
+  };
+
   constructor() {
     if (LoggerSingleton.instance) {
       return LoggerSingleton.instance;
@@ -15,44 +24,46 @@ class LoggerSingleton {
     LoggerSingleton.instance = this;
   }
 
-  _formatMessage(level, message, meta) {
+  private _formatMessage(level: string, message: string, meta?: unknown): string {
     const timestamp = new Date().toISOString();
     let msg = `[${timestamp}] [${level}] ${message}`;
     if (meta) {
       if (meta instanceof Error) {
         msg += ` | Stack: ${meta.stack}`;
       } else {
-        msg += ` | Meta: ${JSON.stringify(meta)}`;
+        try {
+          msg += ` | Meta: ${JSON.stringify(meta)}`;
+        } catch {
+          msg += ` | Meta: [Unserializable Object]`;
+        }
       }
     }
     return msg;
   }
 
-  info(message, meta = null) {
+  public info(message: string, meta: unknown = null) {
     console.log(this._formatMessage(this.levels.INFO, message, meta));
   }
 
-  debug(message, meta = null) {
-    // Podría deshabilitarse en producción
+  public debug(message: string, meta: unknown = null) {
     if (process.env.NODE_ENV !== 'production') {
       console.debug(this._formatMessage(this.levels.DEBUG, message, meta));
     }
   }
 
-  warning(message, meta = null) {
+  public warning(message: string, meta: unknown = null) {
     console.warn(this._formatMessage(this.levels.WARNING, message, meta));
   }
 
-  error(message, errorOrMeta = null) {
+  public error(message: string, errorOrMeta: unknown = null) {
     console.error(this._formatMessage(this.levels.ERROR, message, errorOrMeta));
   }
 
-  critical(message, errorOrMeta = null) {
-    // Aquí se podrían añadir alertas por correo, slack, etc.
+  public critical(message: string, errorOrMeta: unknown = null) {
     console.error(this._formatMessage(this.levels.CRITICAL, ` CRITICAL  - ${message}`, errorOrMeta));
   }
 }
 
 const logger = new LoggerSingleton();
-
-module.exports = logger;
+export default logger;
+export { LoggerSingleton };

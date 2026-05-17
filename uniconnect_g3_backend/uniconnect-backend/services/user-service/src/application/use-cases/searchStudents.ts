@@ -1,12 +1,22 @@
-class SearchStudents {
-  constructor(academicProfileRepo, userRepo) {
+import { User } from '@uniconnect/shared';
+import { IAcademicProfileRepository, IUserRepository } from '../../domain/repositories';
+
+export interface SearchStudentResult extends User {
+  materiasIds: string[];
+}
+
+export default class SearchStudents {
+  private academicProfileRepo: IAcademicProfileRepository;
+  private userRepo: IUserRepository;
+
+  constructor(academicProfileRepo: IAcademicProfileRepository, userRepo: IUserRepository) {
     this.academicProfileRepo = academicProfileRepo;
     this.userRepo = userRepo;
   }
 
-  async execute({ name, subjectId, excludeId }) {
+  async execute({ name, subjectId, excludeId }: { name?: string; subjectId?: string; excludeId?: string }): Promise<SearchStudentResult[]> {
     // Filtrar perfiles académicos por materia
-    let subjectIdsArray = [];
+    let subjectIdsArray: string[] = [];
     if (subjectId) {
       subjectIdsArray = subjectId.split(',');
     }
@@ -35,14 +45,14 @@ class SearchStudents {
     let results = users.map(userData => {
       const userProfile = filteredProfiles.find(p => p.studentId === userData.uid);
       return {
-        id: userData.id,
         ...userData,
+        id: userData.id || userData.uid,
         materiasIds: userProfile ? userProfile.subjects : []
-      };
+      } as unknown as SearchStudentResult;
     });
 
     // Filtros finales en memoria
-    if (excludeId) results = results.filter(u => u.id !== excludeId);
+    if (excludeId) results = results.filter(u => u.uid !== excludeId && u.id !== excludeId);
     if (name) {
       const searchName = name.toLowerCase();
       results = results.filter(u => u.name?.toLowerCase().includes(searchName));
@@ -51,5 +61,3 @@ class SearchStudents {
     return results;
   }
 }
-
-module.exports = SearchStudents;

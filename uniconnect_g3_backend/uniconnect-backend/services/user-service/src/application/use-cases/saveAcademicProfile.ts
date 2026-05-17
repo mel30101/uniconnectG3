@@ -1,23 +1,48 @@
-const admin = require('firebase-admin');
+import * as admin from 'firebase-admin';
+import { User } from '@uniconnect/shared';
+import { IAcademicProfileRepository, IUserRepository, IAcademicCatalogRepository } from '../../domain/repositories';
+import GetFullProfile from './getFullProfile';
 
-class SaveAcademicProfile {
-  constructor(academicProfileRepo, userRepo, catalogRepo, getFullProfileUseCase) {
+export interface SaveProfileInput {
+  studentId: string;
+  biography?: string;
+  showEmail?: boolean;
+  phone?: string;
+  age?: string | number;
+  studyPreference?: string;
+  facultyId?: string;
+  academicLevelId?: string;
+  formationLevelId?: string;
+  careerId?: string;
+  subjects?: string[];
+}
+
+export default class SaveAcademicProfile {
+  private academicProfileRepo: IAcademicProfileRepository;
+  private userRepo: IUserRepository;
+  private catalogRepo: IAcademicCatalogRepository;
+  private getFullProfileUseCase: GetFullProfile;
+
+  constructor(
+    academicProfileRepo: IAcademicProfileRepository,
+    userRepo: IUserRepository,
+    catalogRepo: IAcademicCatalogRepository,
+    getFullProfileUseCase: GetFullProfile
+  ) {
     this.academicProfileRepo = academicProfileRepo;
     this.userRepo = userRepo;
     this.catalogRepo = catalogRepo;
     this.getFullProfileUseCase = getFullProfileUseCase;
   }
 
-  async execute(data) {
+  async execute(data: SaveProfileInput): Promise<User> {
     const {
       studentId,
-      // Información personal
       biography,
       showEmail,
       phone,
       age,
       studyPreference,
-      // Información académica
       facultyId,
       academicLevelId,
       formationLevelId,
@@ -43,7 +68,7 @@ class SaveAcademicProfile {
     }
 
     // 1. Guardar información personal en la colección 'users'
-    const personalInfo = {
+    const personalInfo: Record<string, unknown> = {
       biography: biography || "",
       showEmail: showEmail ?? true,
       phone: phone || "",
@@ -52,10 +77,10 @@ class SaveAcademicProfile {
       updatedAt: new Date(),
       institutionalEmail: admin.firestore.FieldValue.delete(),
     };
-    await this.userRepo.save(studentId, personalInfo);
+    await this.userRepo.save(studentId, personalInfo as Partial<User>);
 
     // 2. Guardar información académica en 'academic_profiles'
-    const academicInfo = {
+    const academicInfo: Record<string, unknown> = {
       studentId,
       mappingId,
       subjects: subjects || [],
@@ -79,5 +104,3 @@ class SaveAcademicProfile {
     return result;
   }
 }
-
-module.exports = SaveAcademicProfile;

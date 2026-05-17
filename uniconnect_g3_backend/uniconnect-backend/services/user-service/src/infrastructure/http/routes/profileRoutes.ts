@@ -1,7 +1,8 @@
-const express = require('express');
+import { Router } from 'express';
+import ProfileController from '../controllers/profileController';
 
-function createProfileRoutes(controller) {
-  const router = express.Router();
+export default function createProfileRoutes(controller: ProfileController): Router {
+  const router = Router();
 
   // Es importante poner las rutas específicas antes de las paramétricas
   router.get('/estadisticas/:studentId', controller.getDecoratedProfile);
@@ -10,5 +11,3 @@ function createProfileRoutes(controller) {
 
   return router;
 }
-
-module.exports = createProfileRoutes;

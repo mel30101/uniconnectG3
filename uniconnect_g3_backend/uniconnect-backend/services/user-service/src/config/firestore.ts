@@ -1,6 +1,10 @@
-const admin = require('firebase-admin');
+import * as admin from 'firebase-admin';
 
 class DatabaseSingleton {
+  private static instance: DatabaseSingleton;
+  private firestoreDb!: admin.firestore.Firestore;
+  private relationalDb: any = null;
+
   constructor() {
     if (DatabaseSingleton.instance) {
       return DatabaseSingleton.instance;
@@ -8,14 +12,12 @@ class DatabaseSingleton {
 
     this._initializeFirebase();
     this.firestoreDb = admin.firestore();
-    
-    // Preparado para futura base de datos relacional
     this.relationalDb = null;
 
     DatabaseSingleton.instance = this;
   }
 
-  _initializeFirebase() {
+  private _initializeFirebase() {
     if (!admin.apps.length) {
       const projectId = process.env.FIREBASE_PROJECT_ID;
       const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
@@ -52,12 +54,12 @@ class DatabaseSingleton {
     }
   }
 
-  getFirestore() {
+  public getFirestore(): admin.firestore.Firestore {
     return this.firestoreDb;
   }
 
   // Futuro método para DB relacional
-  getRelationalDb() {
+  public getRelationalDb() {
     if (!this.relationalDb) {
       throw new Error("Relational database not initialized yet");
     }
@@ -69,4 +71,4 @@ class DatabaseSingleton {
 const dbInstance = new DatabaseSingleton();
 const db = dbInstance.getFirestore();
 
-module.exports = { db, dbInstance };
+export { db, dbInstance };

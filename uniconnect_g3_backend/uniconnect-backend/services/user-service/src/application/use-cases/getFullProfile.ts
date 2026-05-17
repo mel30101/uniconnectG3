@@ -1,26 +1,37 @@
-class GetFullProfile {
-  constructor(academicProfileRepo, userRepo, catalogRepo) {
+import { User } from '@uniconnect/shared';
+import { IAcademicProfileRepository, IUserRepository, IAcademicCatalogRepository, AcademicMapping, Subject, AcademicProfile } from '../../domain/repositories';
+
+export default class GetFullProfile {
+  private academicProfileRepo: IAcademicProfileRepository;
+  private userRepo: IUserRepository;
+  private catalogRepo: IAcademicCatalogRepository;
+
+  constructor(
+    academicProfileRepo: IAcademicProfileRepository,
+    userRepo: IUserRepository,
+    catalogRepo: IAcademicCatalogRepository
+  ) {
     this.academicProfileRepo = academicProfileRepo;
     this.userRepo = userRepo;
     this.catalogRepo = catalogRepo;
   }
 
-  async execute(studentId) {
+  async execute(studentId: string): Promise<User> {
     // Consultas en paralelo para mejor performance
     const [profileData, userData] = await Promise.all([
       this.academicProfileRepo.findByStudentId(studentId),
       this.userRepo.findById(studentId)
     ]);
 
-    const profile = profileData || {};
-    const user = userData || {};
+    const profile: AcademicProfile = profileData || { studentId, mappingId: "", subjects: [] as string[], updatedAt: new Date() };
+    const user: Partial<User> = userData || {};
 
     if (!userData && !profileData) {
       throw new Error('PROFILE_NOT_FOUND');
     }
 
     // Resolver jerarquía desde academic_mappings si existe mappingId
-    let mappingData = {};
+    let mappingData: Partial<AcademicMapping> = {};
     if (profile.mappingId) {
       const mapping = await this.catalogRepo.getMappingById(profile.mappingId);
       if (mapping) {
@@ -36,11 +47,11 @@ class GetFullProfile {
 
     // Consultas paralelas de catálogos
     const [faculty, academicLevel, formationLevel, career, subjectDocs] = await Promise.all([
-      this.catalogRepo.getFacultyById(facultyId),
-      this.catalogRepo.getAcademicLevelById(academicLevelId),
-      this.catalogRepo.getFormationLevelById(formationLevelId),
-      this.catalogRepo.getCareerById(careerId),
-      profile.subjects ? this.catalogRepo.getSubjectsByIds(profile.subjects) : Promise.resolve([])
+      facultyId ? this.catalogRepo.getFacultyById(facultyId) : Promise.resolve(null),
+      academicLevelId ? this.catalogRepo.getAcademicLevelById(academicLevelId) : Promise.resolve(null),
+      formationLevelId ? this.catalogRepo.getFormationLevelById(formationLevelId) : Promise.resolve(null),
+      careerId ? this.catalogRepo.getCareerById(careerId) : Promise.resolve(null),
+      profile.subjects ? this.catalogRepo.getSubjectsByIds(profile.subjects) : Promise.resolve([] as Subject[])
     ]);
 
     return {
@@ -55,9 +66,7 @@ class GetFullProfile {
       academicLevelName: academicLevel ? academicLevel.name : 'No especificado',
       formationLevelName: formationLevel ? formationLevel.name : 'No especificado',
       careerName: career ? career.name : 'No encontrada',
-      subjectNames: subjectDocs.map(d => d.exists !== false ? d.name : 'Materia desconocida')
-    };
+      subjectNames: subjectDocs.map((d: Subject) => d.exists !== false ? d.name : 'Materia desconocida')
+    } as unknown as User;
   }
 }
-
-module.exports = GetFullProfile;

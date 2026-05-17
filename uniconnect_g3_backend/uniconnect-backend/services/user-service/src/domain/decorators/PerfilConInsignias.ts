@@ -1,15 +1,16 @@
-const PerfilDecorator = require('./PerfilDecorator');
+import { User } from '@uniconnect/shared';
+import { PerfilDecorator, PerfilComponent } from './PerfilDecorator';
 
-class PerfilConInsignias extends PerfilDecorator {
-  constructor(perfil) {
+export class PerfilConInsignias extends PerfilDecorator {
+  constructor(perfil: PerfilComponent) {
     super(perfil);
   }
 
-  getProfileData() {
+  getProfileData(): User {
     const baseData = super.getProfileData();
     const stats = baseData.estadisticas || { gruposCreados: 0, gruposParticipa: 0, mensajesEnviados: 0 };
     
-    const insignias = [];
+    const insignias: string[] = [];
     
     if (stats.mensajesEnviados > 10) {
       insignias.push("Comunicador Frecuente");
@@ -30,5 +31,3 @@ class PerfilConInsignias extends PerfilDecorator {
     };
   }
 }
-
-module.exports = PerfilConInsignias;

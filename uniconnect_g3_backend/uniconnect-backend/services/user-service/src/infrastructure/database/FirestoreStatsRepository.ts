@@ -1,9 +1,15 @@
-class FirestoreStatsRepository {
-  constructor(db) {
+import * as admin from 'firebase-admin';
+import { Estadisticas } from '@uniconnect/shared';
+import { IStatsRepository } from '../../domain/repositories';
+
+export default class FirestoreStatsRepository implements IStatsRepository {
+  private db: admin.firestore.Firestore;
+
+  constructor(db: admin.firestore.Firestore) {
     this.db = db;
   }
 
-  async getStudentStats(studentId) {
+  async getStudentStats(studentId: string): Promise<Estadisticas> {
     try {
       // Get groups where student is admin (gruposCreados)
       const groupsAdminSnapshot = await this.db.collection('groups')
@@ -38,5 +44,3 @@ class FirestoreStatsRepository {
     }
   }
 }
-
-module.exports = FirestoreStatsRepository;
