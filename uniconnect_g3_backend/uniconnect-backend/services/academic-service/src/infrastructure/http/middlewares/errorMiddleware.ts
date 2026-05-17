@@ -1,13 +1,14 @@
-const logger = require('../../../config/logger');
+import { Request, Response, NextFunction } from 'express';
+import logger from '../../../config/logger';
 
 // Captura errores de funciones async automáticamente
-exports.asyncHandler = (fn) => (req, res, next) => {
+export const asyncHandler = (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
 
 // Manejador central de errores
-exports.globalErrorHandler = (err, req, res, next) => {
-  const errorMap = {
+export const globalErrorHandler = (err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  const errorMap: Record<string, number> = {
     // 400 Bad Request
     'GROUP_NAME_ALREADY_EXISTS': 400,
     'MISSING_FIELDS': 400,

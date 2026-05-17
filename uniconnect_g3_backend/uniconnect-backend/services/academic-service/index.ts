@@ -1,18 +1,20 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const { db } = require('./src/config/firestore');
+import * as dotenv from 'dotenv';
+dotenv.config();
 
-const FirestoreAcademicCatalogRepository = require('./src/infrastructure/database/FirestoreAcademicCatalogRepository');
+import express, { Request, Response } from 'express';
+import cors from 'cors';
+import { db } from './src/config/firestore';
+
+import { FirestoreAcademicCatalogRepository } from './src/infrastructure/database/FirestoreAcademicCatalogRepository';
 const catalogRepo = new FirestoreAcademicCatalogRepository(db);
 
-const GetAllFaculties = require('./src/application/use-cases/getAllFaculties');
-const GetAcademicLevelsByFaculty = require('./src/application/use-cases/getAcademicLevelsByFaculty');
-const GetFormationLevels = require('./src/application/use-cases/getFormationLevels');
-const GetCareersByPath = require('./src/application/use-cases/getCareersByPath');
-const GetAllCareers = require('./src/application/use-cases/getAllCareers');
-const GetAllSubjects = require('./src/application/use-cases/getAllSubjects');
-const GetCareerStructure = require('./src/application/use-cases/getCareerStructure');
+import { GetAllFaculties } from './src/application/use-cases/getAllFaculties';
+import { GetAcademicLevelsByFaculty } from './src/application/use-cases/getAcademicLevelsByFaculty';
+import { GetFormationLevels } from './src/application/use-cases/getFormationLevels';
+import { GetCareersByPath } from './src/application/use-cases/getCareersByPath';
+import { GetAllCareers } from './src/application/use-cases/getAllCareers';
+import { GetAllSubjects } from './src/application/use-cases/getAllSubjects';
+import { GetCareerStructure } from './src/application/use-cases/getCareerStructure';
 
 const getAllFacultiesUC = new GetAllFaculties(catalogRepo);
 const getAcademicLevelsByFacultyUC = new GetAcademicLevelsByFaculty(catalogRepo);
@@ -22,7 +24,7 @@ const getAllCareersUC = new GetAllCareers(catalogRepo);
 const getAllSubjectsUC = new GetAllSubjects(catalogRepo);
 const getCareerStructureUC = new GetCareerStructure(catalogRepo);
 
-const AcademicController = require('./src/infrastructure/http/controllers/academicController');
+import { AcademicController } from './src/infrastructure/http/controllers/academicController';
 const academicCtrl = new AcademicController({
   getAllFaculties: getAllFacultiesUC,
   getAcademicLevelsByFaculty: getAcademicLevelsByFacultyUC,
@@ -33,12 +35,13 @@ const academicCtrl = new AcademicController({
   getCareerStructure: getCareerStructureUC
 });
 
-const createAcademicRoutes = require('./src/infrastructure/http/routes/academicRoutes');
+import { createAcademicRoutes } from './src/infrastructure/http/routes/academicRoutes';
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
-app.get('/health', (req, res) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({
     status: 'ok',
     service: 'academic-service',

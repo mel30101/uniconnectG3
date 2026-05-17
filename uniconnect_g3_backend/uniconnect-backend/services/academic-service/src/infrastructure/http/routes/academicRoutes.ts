@@ -1,6 +1,7 @@
-const express = require('express');
+import express, { Router } from 'express';
+import { AcademicController } from '../controllers/academicController';
 
-function createAcademicRoutes(controller) {
+export function createAcademicRoutes(controller: AcademicController): Router {
   const router = express.Router();
 
   // Hierarchy routes (montadas en /api/hierarchy)
@@ -20,5 +21,3 @@ function createAcademicRoutes(controller) {
 
   return router;
 }
-
-module.exports = createAcademicRoutes;

@@ -1,9 +1,20 @@
-class GetCareerStructure {
-  constructor(catalogRepo) {
+import { IAcademicCatalogRepository } from '../../domain/repositories';
+import { Subject } from '../../domain/models';
+
+export interface StructureSection {
+  sectionId: string;
+  sectionName: string;
+  subjects: Subject[];
+}
+
+export class GetCareerStructure {
+  private catalogRepo: IAcademicCatalogRepository;
+
+  constructor(catalogRepo: IAcademicCatalogRepository) {
     this.catalogRepo = catalogRepo;
   }
 
-  async execute(careerId) {
+  async execute(careerId: string): Promise<StructureSection[]> {
     // 1. Obtener secciones de la carrera
     const sections = await this.catalogRepo.getSectionsByCareerId(careerId);
 
@@ -15,7 +26,7 @@ class GetCareerStructure {
     const allSubjects = await this.catalogRepo.getAllSubjects();
 
     // 3. Organizar materias dentro de sus secciones
-    const structure = sections.map(section => {
+    const structure: StructureSection[] = sections.map(section => {
       const sectionSubjects = allSubjects.filter(sub =>
         String(sub.sectionId || '').trim() === String(section.id).trim()
       );
@@ -30,5 +41,3 @@ class GetCareerStructure {
     return structure;
   }
 }
-
-module.exports = GetCareerStructure;
