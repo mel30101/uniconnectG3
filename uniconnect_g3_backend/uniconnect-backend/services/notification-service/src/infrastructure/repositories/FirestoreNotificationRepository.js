@@ -10,6 +10,12 @@ class FirestoreNotificationRepository {
     return docRef.id;
   }
 
+  async findById(notificationId) {
+    const doc = await this.db.collection('notifications').doc(notificationId).get();
+    if (!doc.exists) return null;
+    return { id: doc.id, ...doc.data() };
+  }
+
   async findByUserId(userId, limit = 20) {
     const snapshot = await this.db.collection('notifications')
       .where('userId', '==', userId)

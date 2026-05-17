@@ -1,4 +1,4 @@
-const { GroupEvents } = require('../../../domain/observer/ISubject');
+const GroupMember = require('../../../domain/GroupMember');
 
 class RequestAdminTransfer {
   constructor(groupRepo, groupMemberRepo, userRepo, db, subject) {
@@ -30,28 +30,33 @@ class RequestAdminTransfer {
       throw new Error('CANDIDATE_NOT_A_MEMBER');
     }
 
-    // Actualizar el grupo con la transferencia pendiente
-    await this.groupRepo.update(groupId, {
-      pendingAdminTransfer: {
-        candidateId,
-        requesterId: adminId,
-        status: 'pending',
-        requestedAt: new Date()
-      }
+    // 1. Reconstruir el miembro (admin) y delegar al estado
+    const member = new GroupMember({
+      groupId,
+      userId: adminId
     });
+    member.state = { subject: this.subject };
+    member.transitionTo('Activo');
+    member.candidateId = candidateId;
 
-    // Notificar al candidato
-    if (this.subject) {
-      const requester = await this.userRepo.findById(adminId);
-      this.subject.notify(GroupEvents.TRANSFERENCIA_ADMIN_SOLICITADA, {
-        targetUserId: candidateId,
-        groupId: group.id,
-        groupName: group.name,
-        userName: requester ? (requester.name || requester.displayName || 'Un administrador') : 'Un administrador'
+    const requester = await this.userRepo.findById(adminId);
+    member.userName = requester ? (requester.name || requester.displayName || 'Un administrador') : 'Un administrador';
+
+    await member.transferir();
+
+    // 2. Persistencia en base al nuevo estado
+    if (member.state.constructor.name === 'PendienteTransferencia') {
+      await this.groupRepo.update(groupId, {
+        pendingAdminTransfer: {
+          candidateId,
+          requesterId: adminId,
+          status: 'pending',
+          requestedAt: new Date()
+        }
       });
     }
 
-    return { success: true, message: 'Solicitud de transferencia enviada.' };
+    return { success: true, message: 'Solicitud de transferencia enviada. Estado: PendienteTransferencia' };
   }
 }
 

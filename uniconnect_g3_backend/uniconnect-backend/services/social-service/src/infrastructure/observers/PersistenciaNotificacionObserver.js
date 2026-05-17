@@ -10,18 +10,33 @@ class PersistenciaNotificacionObserver extends IObserver {
     try {
       console.log(`[Observer Persistencia] Procesando evento: ${event}`);
       
+      const priority = data.priority || 'normal';
+      const priorityWeight = { critica: 3, urgente: 2, normal: 1 }[priority] || 1;
+
+      const standardizedType = this._mapEventType(event);
+
+      const targetUser = data.targetUserId || data.candidateId || data.userId;
+
       const notification = {
-        type: event,
-        targetUserId: data.targetUserId,
+        type: standardizedType,
+        targetUserId: targetUser,
+        userId: targetUser, // Compatibility con notification-service
         groupId: data.groupId,
         groupName: data.groupName,
         message: this.generateMessage(event, data),
-        read: false,
+        status: 'unread', // Compatibility con notification-service
+        priority: priority,
+        priorityWeight: priorityWeight,
+        metadata: {
+          groupId: data.groupId,
+          requestId: data.requestId || '',
+          type: standardizedType
+        },
         createdAt: new Date()
       };
 
       await this.db.collection('notifications').add(notification);
-      console.log(`[Observer Persistencia] Notificación guardada en Firestore para el usuario: ${data.targetUserId}`);
+      console.log(`[Observer Persistencia] Notificación guardada en Firestore para el usuario: ${targetUser}`);
     } catch (error) {
       console.error('[Observer Persistencia] Error persistiendo notificación:', error);
     }
@@ -38,14 +53,28 @@ class PersistenciaNotificacionObserver extends IObserver {
       case 'TRANSFERENCIA_ADMIN':
         return `Ahora eres el administrador del grupo ${data.groupName}.`;
       case 'TRANSFERENCIA_ADMIN_SOLICITADA':
-        return `${data.userName} te ha solicitado ser el administrador del grupo ${data.groupName}.`;
+      case 'ADMIN_TRANSFER_REQUESTED':
+        return `${data.userName || 'Un administrador'} te ha solicitado ser el administrador del grupo ${data.groupName || 'tu grupo'}.`;
       case 'TRANSFERENCIA_ADMIN_ACEPTADA':
-        return `${data.userName} ha aceptado ser el administrador del grupo ${data.groupName}.`;
+      case 'ADMIN_TRANSFER_COMPLETED':
+        return `${data.userName || 'Un administrador'} ha aceptado ser el administrador del grupo ${data.groupName || 'tu grupo'}.`;
       case 'TRANSFERENCIA_ADMIN_RECHAZADA':
-        return `${data.userName} ha rechazado ser el administrador del grupo ${data.groupName}.`;
+      case 'ADMIN_TRANSFER_REJECTED':
+        return `${data.userName || 'Un administrador'} ha rechazado ser el administrador del grupo ${data.groupName || 'tu grupo'}.`;
+      case 'NOTIFICACION_SISTEMA':
+        if (data.type === 'group_request_accepted') {
+          return `Tu solicitud para unirte al grupo ${data.groupName || 'seleccionado'} ha sido aceptada.`;
+        }
+        return data.message || `Notificación del sistema para el grupo ${data.groupName || 'seleccionado'}.`;
       default:
         return `Nueva notificación en el grupo ${data.groupName}.`;
     }
+  }
+
+  _mapEventType(event) {
+    if (event === 'SOLICITUD_INGRESO') return 'group_request';
+    if (event === 'NOTIFICACION_SISTEMA') return 'notification_system';
+    return 'group_update';
   }
 }
 

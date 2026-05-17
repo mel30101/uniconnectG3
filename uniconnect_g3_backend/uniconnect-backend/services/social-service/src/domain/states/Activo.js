@@ -15,6 +15,7 @@ class Activo extends IEstadoGrupo {
         groupId: context.groupId,
         oldAdminId: context.userId,
         candidateId: context.candidateId,
+        userName: context.userName,
         newState: context.state.getFriendlyName()
       });
     }
