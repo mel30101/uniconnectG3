@@ -55,8 +55,7 @@ class GetGroupById {
         this.requesterId = reqId;
         switch (status) {
           case 'pending': 
-            // Fallback since we deleted SolicitudIngresoState. 
-            // Using an anonymous object to avoid breaking the UI for pending users.
+            // Using an anonymous object to represent pending group membership status without a separate state class.
             this.state = { getFriendlyName: () => 'Pendiente de Ingreso', isExitLocked: () => false }; 
             break;
           case 'member':

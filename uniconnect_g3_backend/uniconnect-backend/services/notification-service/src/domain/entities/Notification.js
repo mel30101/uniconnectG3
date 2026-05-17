@@ -9,9 +9,9 @@ class Notification extends INotificacion {
     this.body = body;
     this.metadata = metadata; // { chatId, groupId, eventId, etc. }
     this.type = type; // 'chat', 'group', 'event'
-    this.status = status; // 'read', 'unread'
-    this.priority = priority; // 'normal', 'urgente', 'critica'
-    this.createdAt = createdAt;
+    this.status = status || 'unread'; // 'read', 'unread'
+    this.priority = priority || 'normal'; // 'normal', 'urgente', 'critica'
+    this.createdAt = createdAt || new Date();
   }
 
   static fromFirestore(id, data) {
@@ -23,6 +23,9 @@ class Notification extends INotificacion {
   }
 
   getDTO() {
+    const safePriority = this.priority || 'normal';
+    const weightMap = { critica: 3, urgente: 2, normal: 1 };
+
     return {
       userId: this.userId,
       title: this.title,
@@ -30,8 +33,8 @@ class Notification extends INotificacion {
       metadata: this.metadata,
       type: this.type,
       status: this.status,
-      priority: this.priority,
-      priorityWeight: { critica: 3, urgente: 2, normal: 1 }[this.priority] || 1,
+      priority: safePriority,
+      priorityWeight: weightMap[safePriority] || 1,
       createdAt: this.createdAt
     };
   }

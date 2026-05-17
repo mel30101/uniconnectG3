@@ -9,7 +9,7 @@ class NotificationObserver {
       title: `Mención en ${groupName}`,
       body: `${mentionedBy} te ha mencionado: "${messagePreview}"`,
       metadata: { groupId, type: 'mention' },
-      type: 'chat'
+      type: 'chat_mention'
     });
   }
 
@@ -19,17 +19,17 @@ class NotificationObserver {
       title: `Nuevo mensaje de ${senderName}`,
       body: messagePreview,
       metadata: { chatId, type: 'private_message' },
-      type: 'chat'
+      type: 'private_message'
     });
   }
 
-  async onGroupRequest(adminId, requesterName, groupName, groupId) {
+  async onGroupRequest(adminId, requesterName, groupName, groupId, requestId) {
     return this.sendNotificationUseCase.execute({
       userId: adminId,
       title: 'Nueva solicitud de unión',
       body: `${requesterName} quiere unirse a tu grupo "${groupName}"`,
-      metadata: { groupId, type: 'group_request' },
-      type: 'group'
+      metadata: { groupId, requestId, type: 'group_request' },
+      type: 'group_request'
     });
   }
 
@@ -41,7 +41,7 @@ class NotificationObserver {
         ? `Tu solicitud para unirte a "${groupName}" fue aceptada`
         : `Tu solicitud para unirte a "${groupName}" fue rechazada`,
       metadata: { groupId, type: accepted ? 'request_accepted' : 'request_rejected' },
-      type: 'group'
+      type: 'group_update'
     });
   }
 
@@ -51,7 +51,7 @@ class NotificationObserver {
       title: 'Nuevo rol de Administrador',
       body: `Ahora eres el administrador del grupo "${groupName}"`,
       metadata: { groupId, type: 'admin_transfer' },
-      type: 'group'
+      type: 'group_update'
     });
   }
 
@@ -61,7 +61,7 @@ class NotificationObserver {
       title: 'Solicitud de Administración',
       body: `${requesterName} te ha solicitado ser el administrador del grupo "${groupName}"`,
       metadata: { groupId, type: 'admin_transfer_requested' },
-      type: 'group'
+      type: 'group_update'
     });
   }
 
@@ -71,7 +71,7 @@ class NotificationObserver {
       title: 'Transferencia de Administración Aceptada',
       body: `${acceptorName} ha aceptado ser el administrador del grupo "${groupName}"`,
       metadata: { groupId, type: 'admin_transfer_accepted' },
-      type: 'group'
+      type: 'group_update'
     });
   }
 
@@ -81,7 +81,7 @@ class NotificationObserver {
       title: 'Transferencia de Administración Rechazada',
       body: `${rejectorName} ha rechazado la solicitud para ser administrador del grupo "${groupName}"`,
       metadata: { groupId, type: 'admin_transfer_rejected' },
-      type: 'group'
+      type: 'group_update'
     });
   }
 

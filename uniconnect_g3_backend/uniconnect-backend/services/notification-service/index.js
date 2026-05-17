@@ -2,6 +2,7 @@ const admin = require('firebase-admin');
 const dotenv = require('dotenv');
 const http = require('http');
 const express = require('express');
+const { Server } = require('socket.io');
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ const ResumenDiarioStrategy = require('./src/infrastructure/strategies/ResumenDi
 // Application
 const SendNotification = require('./src/application/use-cases/SendNotification');
 const NotificationObserver = require('./src/application/observers/NotificationObserver');
+const MarkNotificationAsRead = require('./src/application/use-cases/MarkNotificationAsRead');
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
@@ -39,6 +41,16 @@ if (!admin.apps.length) {
   }
 }
 
+// HTTP Server
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+  }
+});
+app.use(express.json());
+
 const db = admin.firestore();
 
 // Dependency Injection (Criterio 3 - Strategy Pattern)
@@ -47,7 +59,7 @@ const tokenRepo = new FirestoreTokenRepository(db);
 const preferenceRepo = new FirestorePreferenceRepository(db);
 
 const strategies = [
-  new InAppWebSocketStrategy(notificationRepo),
+  new InAppWebSocketStrategy(notificationRepo, io),
   new PushMovilStrategy(tokenRepo),
   new EmailInstitucionalStrategy(),
   new ResumenDiarioStrategy(db)
@@ -55,11 +67,7 @@ const strategies = [
 
 const sendNotificationUseCase = new SendNotification(strategies, preferenceRepo);
 const notificationObserver = new NotificationObserver(sendNotificationUseCase);
-
-// HTTP Server
-const app = express();
-const server = http.createServer(app);
-app.use(express.json());
+const markNotificationAsReadUseCase = new MarkNotificationAsRead(notificationRepo);
 
 app.get('/health', (req, res) => {
   res.status(200).json({ 
@@ -79,7 +87,7 @@ app.post('/notify', async (req, res) => {
     switch (event) {
       case 'SOLICITUD_INGRESO':
         result = await notificationObserver.onGroupRequest(
-          payload.targetUserId, payload.userName, payload.groupName, payload.groupId
+          payload.targetUserId, payload.userName, payload.groupName, payload.groupId, payload.requestId
         );
         break;
       case 'SOLICITUD_ACEPTADA':
@@ -137,11 +145,25 @@ app.post('/notify', async (req, res) => {
 app.get('/notifications/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const limit = parseInt(req.query.limit) || 20;
+    const requestedLimit = parseInt(req.query.limit) || 20;
+    const limit = Math.min(requestedLimit, 50); // Límite máximo de 50 para Criterio 5
     const notifications = await notificationRepo.findByUserId(userId, limit);
     res.json({ success: true, data: notifications });
   } catch (error) {
     console.error('[NotificationService] Error getting notifications:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ─── GET /notifications/:userId/unread-count ──────────────────
+// Devuelve el número de notificaciones no leídas de un usuario
+app.get('/notifications/:userId/unread-count', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const count = await notificationRepo.countUnread(userId);
+    res.json({ success: true, unreadCount: count });
+  } catch (error) {
+    console.error('[NotificationService] Error counting unread notifications:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -151,11 +173,18 @@ app.get('/notifications/:userId', async (req, res) => {
 app.patch('/notifications/:id/read', async (req, res) => {
   try {
     const { id } = req.params;
-    await notificationRepo.markAsRead(id);
+    const authUserId = req.body.authUserId || req.body.userId;
+    
+    if (!authUserId) {
+      return res.status(400).json({ error: 'Falta authUserId en el cuerpo de la petición' });
+    }
+
+    await markNotificationAsReadUseCase.execute(id, authUserId);
     res.json({ success: true });
   } catch (error) {
     console.error('[NotificationService] Error marking as read:', error);
-    res.status(500).json({ error: error.message });
+    const status = error.message === 'UNAUTHORIZED' ? 403 : (error.message === 'NOTIFICATION_NOT_FOUND' ? 404 : 500);
+    res.status(status).json({ error: error.message });
   }
 });
 

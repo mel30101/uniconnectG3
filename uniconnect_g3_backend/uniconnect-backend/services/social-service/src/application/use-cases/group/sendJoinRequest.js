@@ -45,7 +45,8 @@ class SendJoinRequest {
         groupId: group.id,
         groupName: group.name,
         userName: userName,
-        applicantId: userId
+        applicantId: userId,
+        requestId: (result && result.id) ? result.id : userId
       });
     }
 

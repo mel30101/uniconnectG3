@@ -17,11 +17,13 @@ class PushNotificationObserver extends IObserver {
         await this._sendToNotificationService('SOLICITUD_INGRESO', data);
       } else if (event === GroupEvents.MENCION) {
         await this._sendToNotificationService('MENCION', data);
-      } else if (event === GroupEvents.TRANSFERENCIA_ADMIN_SOLICITADA) {
-        await this._sendToNotificationService('TRANSFER_ADMIN_SOLICITADA', data);
-      } else if (event === GroupEvents.TRANSFERENCIA_ADMIN_ACEPTADA) {
+      } else if (event === GroupEvents.TRANSFERENCIA_ADMIN_SOLICITADA || event === 'ADMIN_TRANSFER_REQUESTED') {
+        // Mapeamos el ID del candidato como targetUserId para la push personal
+        const mappedData = { ...data, targetUserId: data.targetUserId || data.candidateId };
+        await this._sendToNotificationService('TRANSFER_ADMIN_SOLICITADA', mappedData);
+      } else if (event === GroupEvents.TRANSFERENCIA_ADMIN_ACEPTADA || event === 'ADMIN_TRANSFER_COMPLETED') {
         await this._sendToNotificationService('TRANSFER_ADMIN_ACEPTADA', data);
-      } else if (event === GroupEvents.TRANSFERENCIA_ADMIN_RECHAZADA) {
+      } else if (event === GroupEvents.TRANSFERENCIA_ADMIN_RECHAZADA || event === 'ADMIN_TRANSFER_REJECTED') {
         await this._sendToNotificationService('TRANSFER_ADMIN_RECHAZADA', data);
       }
     } catch (error) {
