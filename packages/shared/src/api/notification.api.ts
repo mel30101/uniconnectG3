@@ -9,11 +9,11 @@ export class NotificationApi {
   }
 
   async markAsRead(notificationId: string): Promise<ApiResponse<void>> {
-    return this.client.put<void>(`/api/notifications/${notificationId}/read`);
+    return this.client.patch<void>(`/api/notifications/${notificationId}/read`);
   }
 
   async markAllAsRead(userId: string): Promise<ApiResponse<void>> {
-    return this.client.put<void>(`/api/notifications/${userId}/read-all`);
+    return this.client.patch<void>(`/api/notifications/user/${userId}/read-all`);
   }
 
   async getUnreadCount(userId: string): Promise<ApiResponse<number>> {

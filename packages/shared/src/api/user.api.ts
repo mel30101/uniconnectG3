@@ -1,6 +1,6 @@
 import type { ApiClient } from './client';
 import { API_ENDPOINTS, buildQueryString } from './endpoints';
-import type { User, UserProfile, PaginatedResponse, ApiResponse } from '../types';
+import type { User, UserProfile, AcademicProfile, PaginatedResponse, ApiResponse } from '../types';
 import type { UserSearchInput, UpdateUserProfileInput } from '../validators';
 
 export class UserApi {
@@ -8,6 +8,10 @@ export class UserApi {
 
   async getProfile(userId: string): Promise<ApiResponse<UserProfile>> {
     return this.client.get<UserProfile>(API_ENDPOINTS.USER.PROFILE(userId));
+  }
+
+  async getFullProfile(userId: string): Promise<ApiResponse<AcademicProfile>> {
+    return this.client.get<AcademicProfile>(`/api/users/estadisticas/${userId}?vista=completa`);
   }
 
   async updateProfile(data: UpdateUserProfileInput): Promise<ApiResponse<UserProfile>> {

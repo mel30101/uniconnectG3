@@ -7,6 +7,7 @@ import ProfileInfoRead from '../components/profile/ProfileInfoRead'
 import ProfileInfoEdit from '../components/profile/ProfileInfoEdit'
 import ProfileAcademicRead from '../components/profile/ProfileAcademicRead'
 import ProfileAcademicEdit from '../components/profile/ProfileAcademicEdit'
+import ProfileEnrichedView from '../components/profile/ProfileEnrichedView'
 import OnboardingModal from '../components/profile/OnboardingModal'
 import { Pencil, LogOut } from 'lucide-react'
 
@@ -157,6 +158,7 @@ export default function ProfilePage() {
         <>
           <ProfileInfoRead user={user} profileData={profileData} />
           <ProfileAcademicRead profileData={profileData} sections={sections} />
+          {isOwnProfile && <ProfileEnrichedView userId={authUser?.uid ?? ''} />}
         </>
       )}
     </div>

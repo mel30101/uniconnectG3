@@ -3,14 +3,18 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@uniconnect/shared'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../lib/firestore'
-import { apiClient } from '../../main'
+import { apiClient, groupApi } from '../../main'
 import { chatAxios } from '../../lib/chatClient'
 import Avatar from '../../components/Avatar'
 import Spinner from '../../components/Spinner'
+import AddMemberModal from '../../components/groups/AddMemberModal'
+import TransferAdminModal from '../../components/groups/TransferAdminModal'
+import { useGroupPendingTransfer } from '../../hooks/useGroupPendingTransfer'
 import {
   Users, ArrowLeft, Calendar, Check, X,
   LayoutDashboard, MessageSquare, ClipboardList,
   Star, ChevronLeft, ChevronRight, MessageCircle,
+  UserPlus, Key, Trash2,
 } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -56,9 +60,13 @@ interface AdminPortalProps {
   onRequestAction: (req: JoinRequest, status: 'accepted' | 'rejected') => Promise<void>
   processingId: string | null
   onLeave: () => void
+  onRemoveMember: (memberId: string, memberName: string) => Promise<void>
+  onTransferAdmin: (newAdminId: string, newAdminName: string) => Promise<void>
+  onOpenAddMember: () => void
+  onOpenTransferModal: () => void
 }
 
-function GroupAdminPortal({ group, pendingRequests, onRequestAction, processingId, onLeave }: AdminPortalProps) {
+function GroupAdminPortal({ group, pendingRequests, onRequestAction, processingId, onLeave, onRemoveMember, onTransferAdmin, onOpenAddMember, onOpenTransferModal }: AdminPortalProps) {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const [section, setSection] = useState<AdminSection>('dashboard')
@@ -198,7 +206,7 @@ function GroupAdminPortal({ group, pendingRequests, onRequestAction, processingI
                       <th className="text-left px-5 py-3">Nombre</th>
                       <th className="text-left px-5 py-3">Rol</th>
                       <th className="text-left px-5 py-3">Estado</th>
-                      <th className="px-5 py-3" />
+                      <th className="px-5 py-3">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -226,13 +234,33 @@ function GroupAdminPortal({ group, pendingRequests, onRequestAction, processingI
                           <div className="flex items-center justify-center gap-1">
                             {m.role === 'admin' && <Star size={14} className="text-[#b39055]" />}
                             {m.id !== user?.uid && (
-                              <button
-                                onClick={() => openDirectChat(m.id, m.name)}
-                                title={`Mensaje a ${m.name}`}
-                                className="p-1 rounded-full hover:bg-[#F4F6F8] transition-colors text-[#002344]"
-                              >
-                                <MessageCircle size={14} />
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => openDirectChat(m.id, m.name)}
+                                  title={`Mensaje a ${m.name}`}
+                                  className="p-1 rounded-full hover:bg-[#F4F6F8] transition-colors text-[#002344]"
+                                >
+                                  <MessageCircle size={14} />
+                                </button>
+                                {m.role !== 'admin' && (
+                                  <>
+                                    <button
+                                      onClick={() => onTransferAdmin(m.id, m.name)}
+                                      title={`Transferir administración a ${m.name}`}
+                                      className="p-1 rounded-full hover:bg-[#F4F6F8] transition-colors text-[#b39055]"
+                                    >
+                                      <Key size={14} />
+                                    </button>
+                                    <button
+                                      onClick={() => onRemoveMember(m.id, m.name)}
+                                      title={`Eliminar a ${m.name}`}
+                                      className="p-1 rounded-full hover:bg-red-50 transition-colors text-red-500"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </>
+                                )}
+                              </>
                             )}
                           </div>
                         </td>
@@ -264,6 +292,14 @@ function GroupAdminPortal({ group, pendingRequests, onRequestAction, processingI
                 className="w-full flex items-center justify-center gap-2 py-3 bg-[#002344] hover:bg-[#002344]/90 text-white rounded-xl font-medium transition-colors"
               >
                 <MessageSquare size={18} />Abrir Chat Grupal
+              </button>
+
+              {/* Add member button */}
+              <button
+                onClick={onOpenAddMember}
+                className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-[#002344]/30 text-[#002344] rounded-xl font-medium hover:bg-[#002344]/5 transition-colors"
+              >
+                <UserPlus size={18} />Añadir Miembro
               </button>
             </>
           )}
@@ -361,7 +397,7 @@ function GroupAdminPortal({ group, pendingRequests, onRequestAction, processingI
             <p className="text-sm font-semibold text-[#111827] mb-1">Abandonar Grupo</p>
             <p className="text-xs text-[#6b7280] mb-3">Salir de esta comunidad. Debes transferir la administración primero.</p>
             <button
-              onClick={onLeave}
+              onClick={onOpenTransferModal}
               className="w-full py-2 text-sm bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-lg transition-colors shadow-sm"
             >
               Abandonar Grupo
@@ -534,11 +570,15 @@ export default function GroupDetailPage() {
   const [actionLoading, setActionLoading] = useState(false)
   const [pendingRequests, setPendingRequests] = useState<JoinRequest[]>([])
   const [processingId, setProcessingId] = useState<string | null>(null)
+  const [showAddMember, setShowAddMember] = useState(false)
+  const [showTransferModal, setShowTransferModal] = useState(false)
   const fetchedRef = useRef(false)
 
   const isAdmin = group?.userStatus === 'admin'
   const isMember = group?.userStatus === 'admin' || group?.userStatus === 'member'
   const hasPendingRequest = group?.userStatus === 'pending'
+
+  const pendingTransfer = useGroupPendingTransfer(id)
 
   // Load group
   useEffect(() => {
@@ -575,7 +615,7 @@ export default function GroupDetailPage() {
       if (code === 'REQUEST_ALREADY_EXISTS') {
         setGroup(g => g ? { ...g, userStatus: 'pending' } : g)
       } else {
-        alert('No se pudo enviar la solicitud')
+        setTimeout(() => alert('No se pudo enviar la solicitud'), 100)
       }
     } finally {
       setActionLoading(false)
@@ -585,7 +625,7 @@ export default function GroupDetailPage() {
   const handleLeave = async () => {
     if (!user?.uid) return
     if (isAdmin) {
-      alert('Debes transferir la administración antes de abandonar el grupo.')
+      setShowTransferModal(true)
       return
     }
     if (!confirm('¿Seguro que quieres abandonar este grupo?')) return
@@ -594,10 +634,46 @@ export default function GroupDetailPage() {
       await apiClient.getAxiosInstance().delete(`/api/groups/${id}/leave/${user.uid}`)
       navigate('/groups')
     } catch {
-      alert('No se pudo abandonar el grupo')
+      setTimeout(() => alert('No se pudo abandonar el grupo'), 100)
     } finally {
       setActionLoading(false)
     }
+  }
+
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
+    if (!user?.uid) return
+    if (!confirm(`¿Estás seguro de que deseas eliminar a ${memberName} del grupo?`)) return
+    try {
+      await groupApi.removeMember(id, memberId, user.uid)
+      setGroup(g => g ? { ...g, members: g.members.filter(m => m.id !== memberId) } : g)
+    } catch (e: unknown) {
+      const msg = (e as any)?.response?.data?.message || 'No se pudo eliminar al miembro'
+      setTimeout(() => alert(msg), 100)
+    }
+  }
+
+  const handleTransferAdmin = async (newAdminId: string, newAdminName: string) => {
+    if (!user?.uid) return
+    if (!confirm(`¿Transferir la administración de '${group?.name}' a ${newAdminName}?`)) return
+    try {
+      await groupApi.transferAdmin(id, user.uid, newAdminId)
+      navigate('/groups')
+    } catch (e: unknown) {
+      const msg = (e as any)?.response?.data?.message || 'No se pudo transferir la administración'
+      setTimeout(() => alert(msg), 100)
+    }
+  }
+
+  const handleTransferSuccess = () => {
+    setShowTransferModal(false)
+    setTimeout(() => alert('Solicitud enviada. El sucesor debe aceptar para completar tu salida.'), 100)
+  }
+
+  const handleMemberAdded = () => {
+    setShowAddMember(false)
+    apiClient.getAxiosInstance()
+      .get<GroupDetail>(`/api/groups/${id}${user?.uid ? `?userId=${user.uid}` : ''}`)
+      .then(res => setGroup(res.data))
   }
 
   const handleRequestAction = async (request: JoinRequest, status: 'accepted' | 'rejected') => {
@@ -607,15 +683,6 @@ export default function GroupDetailPage() {
         `/api/groups/${id}/requests/${request.userId}`,
         { status }
       )
-      const notifyUrl = import.meta.env.VITE_NOTIFICATION_URL
-      if (notifyUrl && group) {
-        try {
-          await apiClient.getAxiosInstance().post(`${notifyUrl}/notify`, {
-            event: status === 'accepted' ? 'SOLICITUD_ACEPTADA' : 'SOLICITUD_RECHAZADA',
-            payload: { userId: request.userId, groupId: group.id, groupName: group.name },
-          })
-        } catch { /* non-critical */ }
-      }
       setPendingRequests(prev => prev.filter(r => r.userId !== request.userId))
       if (status === 'accepted') {
         setGroup(g => g ? {
@@ -624,7 +691,7 @@ export default function GroupDetailPage() {
         } : g)
       }
     } catch {
-      alert(`No se pudo ${status === 'accepted' ? 'aceptar' : 'rechazar'} la solicitud`)
+      setTimeout(() => alert(`No se pudo ${status === 'accepted' ? 'aceptar' : 'rechazar'} la solicitud`), 100)
     } finally {
       setProcessingId(null)
     }
@@ -647,13 +714,40 @@ export default function GroupDetailPage() {
 
   if (isAdmin) {
     return (
-      <GroupAdminPortal
-        group={group}
-        pendingRequests={pendingRequests}
-        onRequestAction={handleRequestAction}
-        processingId={processingId}
-        onLeave={handleLeave}
-      />
+      <>
+        <GroupAdminPortal
+          group={group}
+          pendingRequests={pendingRequests}
+          onRequestAction={handleRequestAction}
+          processingId={processingId}
+          onLeave={handleLeave}
+          onRemoveMember={handleRemoveMember}
+          onTransferAdmin={handleTransferAdmin}
+          onOpenAddMember={() => setShowAddMember(true)}
+          onOpenTransferModal={() => setShowTransferModal(true)}
+        />
+        {showAddMember && group && (
+          <AddMemberModal
+            groupId={group.id}
+            subjectId={group.subjectId}
+            currentUserId={user?.uid ?? ''}
+            members={group.members}
+            onClose={() => setShowAddMember(false)}
+            onAdded={handleMemberAdded}
+          />
+        )}
+        {showTransferModal && group && (
+          <TransferAdminModal
+            groupId={group.id}
+            adminId={user?.uid ?? ''}
+            groupName={group.name}
+            members={group.members}
+            pendingTransfer={pendingTransfer ? { candidateId: pendingTransfer.candidateId, status: pendingTransfer.status } : null}
+            onClose={() => setShowTransferModal(false)}
+            onSuccess={handleTransferSuccess}
+          />
+        )}
+      </>
     )
   }
 

@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { createApiClient, AuthApi, UserApi, GroupApi, ChatApi, AcademicApi } from '@uniconnect/shared/api'
+import { createApiClient, AuthApi, UserApi, GroupApi, ChatApi, AcademicApi, EventApi, SearchApi } from '@uniconnect/shared/api'
 import { initStorageSync } from './adapters/storage'
 import './index.css'
 import App from './App.tsx'
@@ -24,6 +24,8 @@ export const userApi = new UserApi(apiClient)
 export const groupApi = new GroupApi(apiClient)
 export const chatApi = new ChatApi(apiClient)
 export const academicApi = new AcademicApi(apiClient)
+export const eventApi = new EventApi(apiClient)
+export const searchApi = new SearchApi(apiClient)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

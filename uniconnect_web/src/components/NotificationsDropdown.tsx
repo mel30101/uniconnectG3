@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Bell } from 'lucide-react'
 import { useNotifications } from '../hooks/useNotifications'
 import { getNotificationSeverity, SEVERITY_COLORS } from '@uniconnect/shared'
+import { apiClient } from '../main'
 
 function relativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
@@ -21,6 +22,9 @@ function notifIcon(type: string, metaType?: string): string {
     if (metaType === 'group_request') return '🔔'
     if (metaType === 'request_accepted') return '✅'
     if (metaType === 'request_rejected') return '❌'
+    if (metaType === 'admin_transfer' || metaType === 'admin_transfer_requested') return '🔑'
+    if (metaType === 'admin_transfer_accepted') return '🤝'
+    if (metaType === 'admin_transfer_rejected') return '↩️'
     return '👥'
   }
   if (type === 'chat') return '💬'
@@ -30,8 +34,9 @@ function notifIcon(type: string, metaType?: string): string {
 
 export default function NotificationsDropdown() {
   const navigate = useNavigate()
-  const { notifications, unreadCount, markRead, markAllRead } = useNotifications()
+  const { notifications, unreadCount, markRead, markAllRead, reload } = useNotifications()
   const [open, setOpen] = useState(false)
+  const [actingId, setActingId] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -48,6 +53,30 @@ export default function NotificationsDropdown() {
     await markRead(id)
     setOpen(false)
     if (groupId) navigate(`/groups/${groupId}`)
+  }
+
+  const handleAdminTransferAction = async (n: any, action: 'accept' | 'reject') => {
+    const groupId = n.metadata?.groupId as string | undefined
+    if (!groupId) return
+    setActingId(n.id)
+    try {
+      await apiClient.getAxiosInstance().post(`/api/groups/${groupId}/transfer-admin/response`, {
+        candidateId: n.userId,
+        action,
+      })
+      await apiClient.getAxiosInstance().patch(`/api/notifications/${n.id}/read`)
+      await markRead(n.id)
+      reload?.()
+      if (action === 'accept') {
+        setTimeout(() => alert('Has aceptado ser administrador del grupo. ¡Felicidades!'), 100)
+      } else {
+        setTimeout(() => alert('Has rechazado la transferencia de administración.'), 100)
+      }
+    } catch {
+      setTimeout(() => alert(`No se pudo ${action === 'accept' ? 'aceptar' : 'rechazar'} la transferencia`), 100)
+    } finally {
+      setActingId(null)
+    }
   }
 
   return (
@@ -91,25 +120,38 @@ export default function NotificationsDropdown() {
                 const groupId = n.metadata?.groupId as string | undefined
                 const isUnread = n.status === 'unread'
                 const severity = getNotificationSeverity(metaType)
-                const severityColor = SEVERITY_COLORS[severity]
+                const colors = SEVERITY_COLORS[severity]
 
                 return (
-                  <button
+                  <div
                     key={n.id}
-                    onClick={() => handleNotifClick(n.id, groupId)}
-                    className={`w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors border-l-4 ${
-                      isUnread ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                    }`}
-                    style={{ borderLeftColor: severityColor.border }}
+                    className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors border-l-4"
+                    style={{
+                      borderLeftColor: colors.border,
+                      backgroundColor: isUnread ? colors.bg : undefined,
+                    }}
                   >
                     <div className="flex items-start gap-2">
                       <span className="text-base flex-shrink-0 mt-0.5">
                         {notifIcon(n.type, metaType)}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className={`text-sm ${isUnread ? 'font-semibold text-gray-900 dark:text-white' : 'font-medium text-gray-700 dark:text-gray-300'}`}>
-                          {n.title}
-                        </p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            onClick={() => handleNotifClick(n.id, groupId)}
+                            className={`text-sm text-left ${isUnread ? 'font-semibold text-gray-900 dark:text-white' : 'font-medium text-gray-700 dark:text-gray-300'}`}
+                          >
+                            {n.title}
+                          </button>
+                          {severity !== 'low' && (
+                            <span
+                              className="text-xs font-semibold px-1.5 py-0.5 rounded"
+                              style={{ backgroundColor: colors.bg, color: colors.text }}
+                            >
+                              {severity === 'high' ? 'URGENTE' : 'IMPORTANTE'}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">
                           {n.body}
                         </p>
@@ -118,17 +160,53 @@ export default function NotificationsDropdown() {
                             {relativeTime(n.createdAt)}
                           </p>
                           {metaType === 'group_request' && groupId && (
-                            <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                            <button
+                              onClick={() => handleNotifClick(n.id, groupId)}
+                              className="text-xs text-blue-600 dark:text-blue-400 font-medium"
+                            >
                               Ver solicitudes →
-                            </span>
+                            </button>
                           )}
                         </div>
+
+                        {/* Admin transfer action buttons */}
+                        {(metaType === 'admin_transfer' || metaType === 'admin_transfer_requested') && groupId && (
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleAdminTransferAction(n, 'accept') }}
+                              disabled={actingId === n.id}
+                              className="flex-1 py-1.5 text-xs bg-[#002344] text-white rounded-lg hover:bg-[#002344]/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
+                            >
+                              {actingId === n.id ? (
+                                <>
+                                  <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                  </svg>
+                                  Procesando...
+                                </>
+                              ) : (
+                                <>✓ Aceptar</>
+                              )}
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleAdminTransferAction(n, 'reject') }}
+                              disabled={actingId === n.id}
+                              className="flex-1 py-1.5 text-xs border border-[#dc2626] text-[#dc2626] rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
+                            >
+                              {actingId === n.id ? '...' : '✗ Rechazar'}
+                            </button>
+                          </div>
+                        )}
                       </div>
                       {isUnread && (
-                        <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-1.5" />
+                        <span
+                          className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5"
+                          style={{ backgroundColor: colors.icon }}
+                        />
                       )}
                     </div>
-                  </button>
+                  </div>
                 )
               })
             )}
