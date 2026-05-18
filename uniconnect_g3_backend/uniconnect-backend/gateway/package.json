@@ -4,8 +4,7 @@
   "main": "dist/index.js",
   "scripts": {
     "generate:spec": "ts-node src/openapi/generator.ts",
-    "prebuild": "npm run generate:spec",
-    "build": "tsc --ignoreDeprecations 6.0",
+    "build": "pnpm run generate:spec && tsc --ignoreDeprecations 6.0",
     "dev": "cross-env TS_NODE_COMPILER_OPTIONS=\"{\\\"ignoreDeprecations\\\":\\\"6.0\\\"}\" ts-node-dev --respawn --transpile-only index.ts",
     "start": "node dist/index.js"
   },

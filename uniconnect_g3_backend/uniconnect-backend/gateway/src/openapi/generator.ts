@@ -3,14 +3,7 @@ import * as path from 'path';
 import { OpenApiGeneratorV3 } from '@asteasolutions/zod-to-openapi';
 import { registry } from './registry';
 
-// Import schemas to trigger their registrations
-import './schemas/common.schemas';
-import './schemas/auth.schemas';
-import './schemas/user.schemas';
-import './schemas/chat.schemas';
-import './schemas/academic.schemas';
-import './schemas/notification.schemas';
-import './schemas/social.schemas';
+
 
 // Read dynamic SemVer version from package.json
 const packageJsonPath = path.join(__dirname, '../../package.json');
