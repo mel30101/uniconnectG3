@@ -5,8 +5,6 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 import type { IncomingMessage } from 'http';
 import swaggerUi from 'swagger-ui-express';
 
-import openapiDocument from './openapi.json';
-
 dotenv.config();
 
 const app = express();
@@ -31,8 +29,20 @@ const onProxyRes = (proxyRes: IncomingMessage) => {
     delete proxyRes.headers['access-control-allow-headers'];
 };
 
+import * as fs from 'fs';
+import * as path from 'path';
+
 // --- CENTRAL SWAGGER UI DOCUMENTATION ---
-app.use('/api-docs', swaggerUi.serve as any, swaggerUi.setup(openapiDocument) as any);
+app.use('/docs', swaggerUi.serve as any, (req: Request, res: Response, next: express.NextFunction) => {
+    // Read the file dynamically so it hot-reloads without restarting
+    const openApiPath = path.resolve(__dirname, './openapi.json');
+    try {
+        const document = JSON.parse(fs.readFileSync(openApiPath, 'utf-8'));
+        (swaggerUi.setup(document) as any)(req, res, next);
+    } catch (e) {
+        res.status(500).send('OpenAPI document not found or invalid');
+    }
+});
 
 // --- AUTH SERVICE ---
 app.use('/auth', createProxyMiddleware({
@@ -255,5 +265,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 API Gateway UniConnect corriendo en puerto ${PORT}`);
     console.log(`🔗 Exponiendo servicios a través de ngrok en el puerto ${PORT}`);
-    console.log(`📖 Documentación de API disponible en http://localhost:${PORT}/api-docs`);
+    console.log(`📖 Documentación de API disponible en http://localhost:${PORT}/docs`);
 });

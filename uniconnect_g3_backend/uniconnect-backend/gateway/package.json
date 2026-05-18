@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "main": "dist/index.js",
   "scripts": {
+    "generate:spec": "ts-node src/openapi/generator.ts",
+    "prebuild": "npm run generate:spec",
     "build": "tsc --ignoreDeprecations 6.0",
     "dev": "cross-env TS_NODE_COMPILER_OPTIONS=\"{\\\"ignoreDeprecations\\\":\\\"6.0\\\"}\" ts-node-dev --respawn --transpile-only index.ts",
     "start": "node dist/index.js"
@@ -17,13 +19,17 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "http-proxy-middleware": "^3.0.0",
-    "swagger-ui-express": "^5.0.0"
+    "swagger-ui-express": "^5.0.0",
+    "zod": "^3.24.2",
+    "@asteasolutions/zod-to-openapi": "^7.3.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/swagger-ui-express": "^4.1.6",
+    "@types/node": "^22.13.4",
     "cross-env": "^7.0.3",
+    "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^6.0.3"
   }
