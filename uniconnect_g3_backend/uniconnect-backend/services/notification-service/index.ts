@@ -1,26 +1,26 @@
-const admin = require('firebase-admin');
-const dotenv = require('dotenv');
-const http = require('http');
-const express = require('express');
-const { Server } = require('socket.io');
+import * as admin from 'firebase-admin';
+import * as dotenv from 'dotenv';
+import * as http from 'http';
+import express, { Request, Response } from 'express';
+import { Server } from 'socket.io';
 
 dotenv.config();
 
 // Infrastructure
-const FirestoreNotificationRepository = require('./src/infrastructure/repositories/FirestoreNotificationRepository');
-const FirestoreTokenRepository = require('./src/infrastructure/repositories/FirestoreTokenRepository');
-const FirestorePreferenceRepository = require('./src/infrastructure/repositories/FirestorePreferenceRepository');
+import { FirestoreNotificationRepository } from './src/infrastructure/repositories/FirestoreNotificationRepository';
+import { FirestoreTokenRepository } from './src/infrastructure/repositories/FirestoreTokenRepository';
+import { FirestorePreferenceRepository } from './src/infrastructure/repositories/FirestorePreferenceRepository';
 
 // Strategies
-const InAppWebSocketStrategy = require('./src/infrastructure/strategies/InAppWebSocketStrategy');
-const PushMovilStrategy = require('./src/infrastructure/strategies/PushMovilStrategy');
-const EmailInstitucionalStrategy = require('./src/infrastructure/strategies/EmailInstitucionalStrategy');
-const ResumenDiarioStrategy = require('./src/infrastructure/strategies/ResumenDiarioStrategy');
+import { InAppWebSocketStrategy } from './src/infrastructure/strategies/InAppWebSocketStrategy';
+import { PushMovilStrategy } from './src/infrastructure/strategies/PushMovilStrategy';
+import { EmailInstitucionalStrategy } from './src/infrastructure/strategies/EmailInstitucionalStrategy';
+import { ResumenDiarioStrategy } from './src/infrastructure/strategies/ResumenDiarioStrategy';
 
 // Application
-const SendNotification = require('./src/application/use-cases/SendNotification');
-const NotificationObserver = require('./src/application/observers/NotificationObserver');
-const MarkNotificationAsRead = require('./src/application/use-cases/MarkNotificationAsRead');
+import { SendNotification } from './src/application/use-cases/SendNotification';
+import { NotificationObserver, NotificationResult } from './src/application/observers/NotificationObserver';
+import { MarkNotificationAsRead } from './src/application/use-cases/MarkNotificationAsRead';
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
@@ -53,7 +53,7 @@ app.use(express.json());
 
 const db = admin.firestore();
 
-// Dependency Injection (Criterio 3 - Strategy Pattern)
+// Dependency Injection
 const notificationRepo = new FirestoreNotificationRepository(db);
 const tokenRepo = new FirestoreTokenRepository(db);
 const preferenceRepo = new FirestorePreferenceRepository(db);
@@ -69,21 +69,21 @@ const sendNotificationUseCase = new SendNotification(strategies, preferenceRepo)
 const notificationObserver = new NotificationObserver(sendNotificationUseCase);
 const markNotificationAsReadUseCase = new MarkNotificationAsRead(notificationRepo);
 
-app.get('/health', (req, res) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({ 
     status: 'ok', 
     service: 'notification-service' 
   });
+  return;
 });
 
 const PORT = process.env.NOTIFICATION_PORT || 3006;
 
 // ─── POST /notify ─────────────────────────────────────────────
-// Recibe eventos de otros microservicios y persiste la notificación
-app.post('/notify', async (req, res) => {
+app.post('/notify', async (req: Request, res: Response) => {
   const { event, payload } = req.body;
   try {
-    let result;
+    let result: NotificationResult | undefined;
     switch (event) {
       case 'SOLICITUD_INGRESO':
         result = await notificationObserver.onGroupRequest(
@@ -131,82 +131,84 @@ app.post('/notify', async (req, res) => {
         );
         break;
       default:
-        return res.status(400).json({ error: `Unknown event type: ${event}` });
+        res.status(400).json({ error: `Unknown event type: ${event}` });
+        return;
     }
     res.json({ success: true, result });
-  } catch (error) {
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error);
     console.error('[NotificationService] Error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: errMsg });
   }
 });
 
 // ─── GET /notifications/:userId ───────────────────────────────
-// Devuelve el historial de notificaciones del usuario (para mobile y web)
-app.get('/notifications/:userId', async (req, res) => {
+app.get('/notifications/:userId', async (req: Request, res: Response) => {
   try {
-    const { userId } = req.params;
-    const requestedLimit = parseInt(req.query.limit) || 20;
-    const limit = Math.min(requestedLimit, 50); // Límite máximo de 50 para Criterio 5
+    const userId = req.params.userId as string;
+    const requestedLimit = parseInt(req.query.limit as string) || 20;
+    const limit = Math.min(requestedLimit, 50);
     const notifications = await notificationRepo.findByUserId(userId, limit);
     res.json({ success: true, data: notifications });
-  } catch (error) {
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error);
     console.error('[NotificationService] Error getting notifications:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: errMsg });
   }
 });
 
 // ─── GET /notifications/:userId/unread-count ──────────────────
-// Devuelve el número de notificaciones no leídas de un usuario
-app.get('/notifications/:userId/unread-count', async (req, res) => {
+app.get('/notifications/:userId/unread-count', async (req: Request, res: Response) => {
   try {
-    const { userId } = req.params;
+    const userId = req.params.userId as string;
     const count = await notificationRepo.countUnread(userId);
     res.json({ success: true, unreadCount: count });
-  } catch (error) {
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error);
     console.error('[NotificationService] Error counting unread notifications:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: errMsg });
   }
 });
 
 // ─── PATCH /notifications/:id/read ────────────────────────────
-// Marca una notificación como leída
-app.patch('/notifications/:id/read', async (req, res) => {
+app.patch('/notifications/:id/read', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const authUserId = req.body.authUserId || req.body.userId;
     
     if (!authUserId) {
-      return res.status(400).json({ error: 'Falta authUserId en el cuerpo de la petición' });
+      res.status(400).json({ error: 'Falta authUserId en el cuerpo de la petición' });
+      return;
     }
 
     await markNotificationAsReadUseCase.execute(id, authUserId);
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error);
     console.error('[NotificationService] Error marking as read:', error);
-    const status = error.message === 'UNAUTHORIZED' ? 403 : (error.message === 'NOTIFICATION_NOT_FOUND' ? 404 : 500);
-    res.status(status).json({ error: error.message });
+    const status = errMsg === 'UNAUTHORIZED' ? 403 : (errMsg === 'NOTIFICATION_NOT_FOUND' ? 404 : 500);
+    res.status(status).json({ error: errMsg });
   }
 });
 
 // ─── PATCH /notifications/user/:userId/read-all ───────────────
-// Marca todas las notificaciones de un usuario como leídas
-app.patch('/notifications/user/:userId/read-all', async (req, res) => {
+app.patch('/notifications/user/:userId/read-all', async (req: Request, res: Response) => {
   try {
-    const { userId } = req.params;
+    const userId = req.params.userId as string;
     await notificationRepo.markAllAsRead(userId);
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error);
     console.error('[NotificationService] Error marking all as read:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: errMsg });
   }
 });
 
-const { startDailySummaryJob } = require('./src/infrastructure/jobs/dailySummaryJob');
+import { startDailySummaryJob } from './src/infrastructure/jobs/dailySummaryJob';
 
 server.listen(PORT, () => {
   console.log(`🔔 Notification Service (Dashboard) running on port ${PORT}`);
-  // Iniciamos el cron job del resumen diario
   startDailySummaryJob();
 });
 
-module.exports = { notificationObserver };
+export { notificationObserver };

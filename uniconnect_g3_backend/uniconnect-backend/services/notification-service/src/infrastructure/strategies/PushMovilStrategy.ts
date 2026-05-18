@@ -1,17 +1,18 @@
-const admin = require('firebase-admin');
-const INotificacionStrategy = require('../../domain/strategies/INotificacionStrategy');
+import * as admin from 'firebase-admin';
+import { INotificacionStrategy, StrategyResult } from '../../domain/strategies/INotificacionStrategy';
+import { INotificacionDTO } from '../../domain/entities/INotificacion';
+import { ITokenRepository } from '../../domain/repositories/ITokenRepository';
 
-/**
- * Concrete strategy for Mobile Push Notifications using Firebase Cloud Messaging (FCM).
- */
-class PushMovilStrategy extends INotificacionStrategy {
-  constructor(tokenRepo) {
-    super();
+export class PushMovilStrategy implements INotificacionStrategy {
+  public canal: string;
+  private tokenRepo: ITokenRepository;
+
+  constructor(tokenRepo: ITokenRepository) {
     this.tokenRepo = tokenRepo;
     this.canal = 'push';
   }
 
-  async enviar(notification) {
+  async enviar(notification: INotificacionDTO): Promise<StrategyResult> {
     try {
       console.log(`[PushMovilStrategy] Fetching tokens for user ${notification.userId}`);
       const tokens = await this.tokenRepo.getTokensByUserId(notification.userId);
@@ -21,16 +22,13 @@ class PushMovilStrategy extends INotificacionStrategy {
         return { canal: 'push', enviado: false, error: 'NO_TOKENS' };
       }
 
-      // 1. Construct the Multicast Message
-      // FCM 'data' fields must be strings
-      const stringifiedData = {};
+      const stringifiedData: Record<string, string> = {};
       if (notification.metadata) {
         Object.keys(notification.metadata).forEach(key => {
           stringifiedData[key] = String(notification.metadata[key]);
         });
       }
 
-      // Add default metadata if needed
       stringifiedData.type = String(notification.type || 'general');
 
       const message = {
@@ -42,32 +40,29 @@ class PushMovilStrategy extends INotificacionStrategy {
         tokens: tokens,
       };
 
-      // 2. Real Multicast Send
       console.log(`[PushMovilStrategy] Sending real FCM multicast to ${tokens.length} tokens...`);
       const response = await admin.messaging().sendEachForMulticast(message);
       
       console.log(`[PushMovilStrategy] FCM summary for ${notification.userId}: ${response.successCount} success, ${response.failureCount} failure.`);
 
-      // 3. Detailed error handling and token cleanup reporting
-      const invalidTokens = [];
+      const invalidTokens: string[] = [];
       if (response.failureCount > 0) {
         response.responses.forEach((resp, idx) => {
           if (!resp.success) {
             const error = resp.error;
             const token = tokens[idx];
             
-            console.error(`[PushMovilStrategy] Delivery failed for token index ${idx}: ${error.code}`);
+            console.error(`[PushMovilStrategy] Delivery failed for token index ${idx}: ${error?.code}`);
             
-            // Check for tokens that are no longer valid
-            if (error.code === 'messaging/invalid-registration-token' || 
-                error.code === 'messaging/registration-token-not-registered') {
+            if (error?.code === 'messaging/invalid-registration-token' || 
+                error?.code === 'messaging/registration-token-not-registered') {
               console.warn(`[PushMovilStrategy] Detected stale/invalid token for user ${notification.userId}`);
               invalidTokens.push(token);
               
-              // Proactive cleanup (Optional, but recommended for maintenance)
-              this.tokenRepo.removeToken(token).catch(err => 
-                console.error('[PushMovilStrategy] Cleanup error:', err.message)
-              );
+              this.tokenRepo.removeToken(token).catch(err => {
+                const errMsg = err instanceof Error ? err.message : String(err);
+                console.error('[PushMovilStrategy] Cleanup error:', errMsg);
+              });
             }
           }
         });
@@ -84,15 +79,14 @@ class PushMovilStrategy extends INotificacionStrategy {
         }
       };
 
-    } catch (error) {
-      console.error('[PushMovilStrategy] Critical Error in FCM logic:', error.message);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.error('[PushMovilStrategy] Critical Error in FCM logic:', errMsg);
       return {
         canal: 'push',
         enviado: false,
-        error: error.message
+        error: errMsg
       };
     }
   }
 }
-
-module.exports = PushMovilStrategy;

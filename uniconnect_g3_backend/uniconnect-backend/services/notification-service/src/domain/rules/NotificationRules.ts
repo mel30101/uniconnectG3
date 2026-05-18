@@ -1,4 +1,10 @@
-const NotificationRules = {
+interface Rule {
+  priority: string;
+  permitirResumen: boolean;
+  requiresAction?: boolean;
+}
+
+const NotificationRules: Record<string, Rule> = {
   NUEVO_MENSAJE: { priority: 'normal', permitirResumen: true },
   MENCION: { priority: 'normal', permitirResumen: true },
   MIEMBRO_ACEPTADO: { priority: 'normal', permitirResumen: true },
@@ -11,4 +17,5 @@ const NotificationRules = {
   TRANSFERENCIA_ADMIN_RECHAZADA: { priority: 'normal', permitirResumen: true }
 };
 
-module.exports = NotificationRules;
+export default NotificationRules;
+export { Rule };

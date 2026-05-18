@@ -1,49 +1,43 @@
-const sgMail = require('@sendgrid/mail');
-const mjml2html = require('mjml');
-const fs = require('fs');
-const path = require('path');
-const INotificacionStrategy = require('../../domain/strategies/INotificacionStrategy');
+import sgMail from '@sendgrid/mail';
+// @ts-ignore
+import mjml2html from 'mjml';
+import * as fs from 'fs';
+import * as path from 'path';
+import { INotificacionStrategy, StrategyResult } from '../../domain/strategies/INotificacionStrategy';
+import { INotificacionDTO } from '../../domain/entities/INotificacion';
 
-/**
- * Strategy for sending professional emails using SendGrid and MJML templates.
- */
-class EmailInstitucionalStrategy extends INotificacionStrategy {
+export class EmailInstitucionalStrategy implements INotificacionStrategy {
+  public canal: string;
+
   constructor() {
-    super();
     this.canal = 'email';
     
-    // Initialize SendGrid API Key
     if (process.env.SENDGRID_API_KEY) {
       sgMail.setApiKey(process.env.SENDGRID_API_KEY);
     }
   }
 
-  /**
-   * Renders the MJML template into HTML injecting dynamic data.
-   * @private
-   */
-  async _renderTemplate(data) {
+  private async _renderTemplate(data: { userName?: string; title: string; body: string }): Promise<string> {
     try {
       const templatePath = path.join(__dirname, '../templates/NotificationTemplate.mjml');
       let mjmlString = fs.readFileSync(templatePath, 'utf8');
 
-      // Inject data into placeholders
-      // Note: For a more robust solution, we could use Handlebars/Mustache
       const renderedMjml = mjmlString
         .replace(/{{userName}}/g, data.userName || 'Estudiante')
         .replace(/{{title}}/g, data.title)
         .replace(/{{body}}/g, data.body);
 
-      const htmlOutput = await (mjml2html.default || mjml2html)(renderedMjml);
+      const htmlOutput = (mjml2html.default || mjml2html)(renderedMjml);
 
       return htmlOutput.html;
-    } catch (error) {
-      console.error('[EmailStrategy] Error rendering MJML template:', error.message);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.error('[EmailStrategy] Error rendering MJML template:', errMsg);
       throw new Error('TEMPLATE_RENDER_ERROR');
     }
   }
 
-  async enviar(notification) {
+  async enviar(notification: INotificacionDTO): Promise<StrategyResult> {
     try {
       console.log(`[EmailStrategy] Preparing email for user ${notification.userId}`);
 
@@ -51,27 +45,26 @@ class EmailInstitucionalStrategy extends INotificacionStrategy {
         throw new Error('SENDGRID_API_KEY_NOT_CONFIGURED');
       }
 
-      // 1. Determine destination email
-      // We check if it comes in metadata, otherwise we fallback to a default pattern
-      const recipientEmail = notification.metadata?.email || `${notification.userId}@unicaldas.edu.co`;
+      const emailVal = notification.metadata?.email;
+      const recipientEmail = typeof emailVal === 'string' ? emailVal : `${notification.userId}@unicaldas.edu.co`;
 
-      // 2. Render the professional HTML template
+      const nameVal = notification.metadata?.userName;
+      const userName = typeof nameVal === 'string' ? nameVal : undefined;
+
       const htmlContent = await this._renderTemplate({
-        userName: notification.metadata?.userName,
+        userName,
         title: notification.title,
         body: notification.body
       });
 
-      // 3. Construct the message
       const msg = {
         to: recipientEmail,
         from: process.env.SENDGRID_FROM_EMAIL || 'no-reply@uniconnect.edu.co',
         subject: `UniConnect: ${notification.title}`,
-        text: notification.body, // Added text fallback
+        text: notification.body,
         html: htmlContent,
       };
 
-      // 4. Send using SendGrid SDK
       const response = await sgMail.send(msg);
       
       console.log(`[EmailStrategy] Email dispatched successfully via SendGrid to ${recipientEmail}`);
@@ -82,8 +75,9 @@ class EmailInstitucionalStrategy extends INotificacionStrategy {
         messageId: response[0]?.headers['x-message-id'] || 'sent'
       };
 
-    } catch (error) {
-      console.error('[EmailStrategy] Failed to dispatch email:', error.response?.body || error.message);
+    } catch (error: any) {
+      const errMsg = error.response?.body || error.message || String(error);
+      console.error('[EmailStrategy] Failed to dispatch email:', errMsg);
       
       return {
         canal: 'email',
@@ -93,5 +87,3 @@ class EmailInstitucionalStrategy extends INotificacionStrategy {
     }
   }
 }
-
-module.exports = EmailInstitucionalStrategy;

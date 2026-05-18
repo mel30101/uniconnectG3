@@ -1,22 +1,21 @@
-const ITokenRepository = require('../../domain/repositories/ITokenRepository');
+import * as admin from 'firebase-admin';
+import { ITokenRepository } from '../../domain/repositories/ITokenRepository';
 
-class FirestoreTokenRepository extends ITokenRepository {
-  constructor(db) {
-    super();
+export class FirestoreTokenRepository implements ITokenRepository {
+  private db: admin.firestore.Firestore;
+
+  constructor(db: admin.firestore.Firestore) {
     this.db = db;
   }
 
-  /**
-   * Retrieves all registered FCM tokens for a specific user
-   */
-  async getTokensByUserId(userId) {
+  async getTokensByUserId(userId: string): Promise<string[]> {
     try {
       const snapshot = await this.db.collection('users').doc(userId).collection('fcm_tokens').get();
       if (snapshot.empty) {
-        // Fallback: check if the user has a single token in the main document (older implementation)
         const userDoc = await this.db.collection('users').doc(userId).get();
-        if (userDoc.exists && userDoc.data().fcm_token) {
-          return [userDoc.data().fcm_token];
+        const data = userDoc.exists ? userDoc.data() : null;
+        if (data && data.fcm_token) {
+          return [data.fcm_token];
         }
         return [];
       }
@@ -27,10 +26,9 @@ class FirestoreTokenRepository extends ITokenRepository {
     }
   }
 
-  async saveToken(userId, token) {
+  async saveToken(userId: string, token: string): Promise<void> {
     try {
-      // Use a subcollection to allow multiple devices per user
-      const tokenId = Buffer.from(token).toString('base64').substring(0, 32); // Simple unique ID
+      const tokenId = Buffer.from(token).toString('base64').substring(0, 32);
       await this.db.collection('users').doc(userId).collection('fcm_tokens').doc(tokenId).set({
         token,
         updatedAt: new Date()
@@ -40,9 +38,8 @@ class FirestoreTokenRepository extends ITokenRepository {
     }
   }
 
-  async removeToken(token) {
+  async removeToken(token: string): Promise<void> {
     try {
-      // This would require a search by field or knowing the userId
       const snapshot = await this.db.collectionGroup('fcm_tokens').where('token', '==', token).get();
       const batch = this.db.batch();
       snapshot.docs.forEach(doc => {
@@ -54,5 +51,3 @@ class FirestoreTokenRepository extends ITokenRepository {
     }
   }
 }
-
-module.exports = FirestoreTokenRepository;

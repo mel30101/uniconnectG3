@@ -1,7 +1,16 @@
-const NotificacionDecorator = require('./NotificacionDecorator');
+import { NotificacionDecorator } from './NotificacionDecorator';
+import { INotificacion, INotificacionDTO } from '../entities/INotificacion';
 
-class AccionDecorator extends NotificacionDecorator {
-  constructor(notificacion, action) {
+interface ActionParams {
+  label: string;
+  endpoint: string;
+  token?: string | null;
+}
+
+export class AccionDecorator extends NotificacionDecorator {
+  private action: ActionParams;
+
+  constructor(notificacion: INotificacion, action: ActionParams) {
     super(notificacion);
     if (!action || typeof action.label !== 'string' || typeof action.endpoint !== 'string') {
       throw new Error("El objeto action debe tener la estructura { label: string, endpoint: string }");
@@ -13,7 +22,7 @@ class AccionDecorator extends NotificacionDecorator {
     };
   }
 
-  getDTO() {
+  getDTO(): INotificacionDTO {
     const dto = super.getDTO();
     return {
       ...dto,
@@ -21,5 +30,3 @@ class AccionDecorator extends NotificacionDecorator {
     };
   }
 }
-
-module.exports = AccionDecorator;

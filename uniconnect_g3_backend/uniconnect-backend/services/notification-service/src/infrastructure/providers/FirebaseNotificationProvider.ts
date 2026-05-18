@@ -1,12 +1,14 @@
-const INotificationProvider = require('../../domain/services/INotificationProvider');
+import * as admin from 'firebase-admin';
+import { INotificationProvider } from '../../domain/services/INotificationProvider';
 
-class FirebaseNotificationProvider extends INotificationProvider {
-  constructor(admin) {
-    super();
-    this.admin = admin;
+export class FirebaseNotificationProvider implements INotificationProvider {
+  private admin: typeof admin;
+
+  constructor(adminInstance: typeof admin) {
+    this.admin = adminInstance;
   }
 
-  async sendPush(token, title, body, data = {}) {
+  async sendPush(token: string, title: string, body: string, data: Record<string, unknown> = {}): Promise<string> {
     const message = {
       notification: {
         title,
@@ -20,18 +22,17 @@ class FirebaseNotificationProvider extends INotificationProvider {
       const response = await this.admin.messaging().send(message);
       console.log('Successfully sent message:', response);
       return response;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error sending push notification:', error);
-      if (error.code === 'messaging/registration-token-not-registered') {
-        // Here we could emit an event to remove this invalid token
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'messaging/registration-token-not-registered') {
         console.warn(`Token ${token} is no longer valid.`);
       }
       throw error;
     }
   }
 
-  async sendPushToMultiple(tokens, title, body, data = {}) {
-    if (!tokens || tokens.length === 0) return;
+  async sendPushToMultiple(tokens: string[], title: string, body: string, data: Record<string, unknown> = {}): Promise<admin.messaging.BatchResponse | undefined> {
+    if (!tokens || tokens.length === 0) return undefined;
 
     const message = {
       notification: {
@@ -47,14 +48,11 @@ class FirebaseNotificationProvider extends INotificationProvider {
       console.log(`${response.successCount} messages were sent successfully`);
       
       if (response.failureCount > 0) {
-        const failedTokens = [];
         response.responses.forEach((resp, idx) => {
           if (!resp.success) {
-            failedTokens.push(tokens[idx]);
             console.error(`Failed to send to token ${tokens[idx]}:`, resp.error);
           }
         });
-        // Logic to handle failed tokens (remove from DB) could be triggered here
       }
       
       return response;
@@ -64,20 +62,15 @@ class FirebaseNotificationProvider extends INotificationProvider {
     }
   }
 
-  /**
-   * FCM data payload values must be strings
-   */
-  _stringifyData(data) {
-    const stringified = {};
+  private _stringifyData(data: Record<string, unknown>): Record<string, string> {
+    const stringified: Record<string, string> = {};
     for (const key in data) {
       if (typeof data[key] !== 'string') {
         stringified[key] = JSON.stringify(data[key]);
       } else {
-        stringified[key] = data[key];
+        stringified[key] = data[key] as string;
       }
     }
     return stringified;
   }
 }
-
-module.exports = FirebaseNotificationProvider;

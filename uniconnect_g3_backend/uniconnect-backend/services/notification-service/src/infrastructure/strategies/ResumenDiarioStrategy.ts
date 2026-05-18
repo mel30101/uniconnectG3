@@ -1,13 +1,17 @@
-const INotificacionStrategy = require('../../domain/strategies/INotificacionStrategy');
+import * as admin from 'firebase-admin';
+import { INotificacionStrategy, StrategyResult } from '../../domain/strategies/INotificacionStrategy';
+import { INotificacionDTO } from '../../domain/entities/INotificacion';
 
-class ResumenDiarioStrategy extends INotificacionStrategy {
-  constructor(db) {
-    super();
+export class ResumenDiarioStrategy implements INotificacionStrategy {
+  public canal: string;
+  private db: admin.firestore.Firestore;
+
+  constructor(db: admin.firestore.Firestore) {
     this.canal = 'resumen_diario';
     this.db = db;
   }
 
-  async enviar(notification) {
+  async enviar(notification: INotificacionDTO): Promise<StrategyResult> {
     try {
       if (!this.db) {
         throw new Error("Firestore DB instance is required");
@@ -15,8 +19,6 @@ class ResumenDiarioStrategy extends INotificacionStrategy {
 
       const { userId, title, body, type } = notification;
 
-      // Se guarda como un documento dentro de una subcolección del usuario
-      // Ruta: daily_buffer/{userId}/notifications/{notificationId}
       const bufferRef = this.db.collection('daily_buffer').doc(userId).collection('notifications');
 
       await bufferRef.add({
@@ -34,11 +36,10 @@ class ResumenDiarioStrategy extends INotificacionStrategy {
         canal: this.canal, 
         enviado: true 
       };
-    } catch (error) {
-      console.error('[ResumenDiarioStrategy] Error:', error.message);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.error('[ResumenDiarioStrategy] Error:', errMsg);
       throw error;
     }
   }
 }
-
-module.exports = ResumenDiarioStrategy;

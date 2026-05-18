@@ -1,9 +1,21 @@
-class NotificationObserver {
-  constructor(sendNotificationUseCase) {
+import { SendNotification } from '../use-cases/SendNotification';
+import { StrategyResult } from '../../domain/strategies/INotificacionStrategy';
+import { INotificacionDTO } from '../../domain/entities/INotificacion';
+
+export interface NotificationResult {
+  success: boolean;
+  results: StrategyResult[];
+  notification: INotificacionDTO;
+}
+
+export class NotificationObserver {
+  private sendNotificationUseCase: SendNotification;
+
+  constructor(sendNotificationUseCase: SendNotification) {
     this.sendNotificationUseCase = sendNotificationUseCase;
   }
 
-  async onMention(userId, mentionedBy, groupName, messagePreview, groupId) {
+  async onMention(userId: string, mentionedBy: string, groupName: string, messagePreview: string, groupId: string): Promise<NotificationResult> {
     return this.sendNotificationUseCase.execute({
       userId,
       title: `Mención en ${groupName}`,
@@ -13,7 +25,7 @@ class NotificationObserver {
     });
   }
 
-  async onPrivateMessage(receiverId, senderName, messagePreview, chatId) {
+  async onPrivateMessage(receiverId: string, senderName: string, messagePreview: string, chatId: string): Promise<NotificationResult> {
     return this.sendNotificationUseCase.execute({
       userId: receiverId,
       title: `Nuevo mensaje de ${senderName}`,
@@ -23,7 +35,7 @@ class NotificationObserver {
     });
   }
 
-  async onGroupRequest(adminId, requesterName, groupName, groupId, requestId) {
+  async onGroupRequest(adminId: string, requesterName: string, groupName: string, groupId: string, requestId: string): Promise<NotificationResult> {
     return this.sendNotificationUseCase.execute({
       userId: adminId,
       title: 'Nueva solicitud de unión',
@@ -33,7 +45,7 @@ class NotificationObserver {
     });
   }
 
-  async onGroupRequestHandled(userId, accepted, groupName, groupId) {
+  async onGroupRequestHandled(userId: string, accepted: boolean, groupName: string, groupId: string): Promise<NotificationResult> {
     return this.sendNotificationUseCase.execute({
       userId,
       title: accepted ? '¡Solicitud aceptada!' : 'Solicitud rechazada',
@@ -45,7 +57,7 @@ class NotificationObserver {
     });
   }
 
-  async onAdminTransfer(userId, groupName, groupId) {
+  async onAdminTransfer(userId: string, groupName: string, groupId: string): Promise<NotificationResult> {
     return this.sendNotificationUseCase.execute({
       userId,
       title: 'Nuevo rol de Administrador',
@@ -55,7 +67,7 @@ class NotificationObserver {
     });
   }
 
-  async onAdminTransferRequested(userId, requesterName, groupName, groupId) {
+  async onAdminTransferRequested(userId: string, requesterName: string, groupName: string, groupId: string): Promise<NotificationResult> {
     return this.sendNotificationUseCase.execute({
       userId,
       title: 'Solicitud de Administración',
@@ -65,7 +77,7 @@ class NotificationObserver {
     });
   }
 
-  async onAdminTransferAccepted(userId, acceptorName, groupName, groupId) {
+  async onAdminTransferAccepted(userId: string, acceptorName: string, groupName: string, groupId: string): Promise<NotificationResult> {
     return this.sendNotificationUseCase.execute({
       userId,
       title: 'Transferencia de Administración Aceptada',
@@ -75,7 +87,7 @@ class NotificationObserver {
     });
   }
 
-  async onAdminTransferRejected(userId, rejectorName, groupName, groupId) {
+  async onAdminTransferRejected(userId: string, rejectorName: string, groupName: string, groupId: string): Promise<NotificationResult> {
     return this.sendNotificationUseCase.execute({
       userId,
       title: 'Transferencia de Administración Rechazada',
@@ -85,7 +97,7 @@ class NotificationObserver {
     });
   }
 
-  async onNewEvent(userId, categoryName, eventTitle, eventId) {
+  async onNewEvent(userId: string, categoryName: string, eventTitle: string, eventId: string): Promise<NotificationResult> {
     return this.sendNotificationUseCase.execute({
       userId,
       title: `Nuevo evento en ${categoryName}`,
@@ -95,5 +107,3 @@ class NotificationObserver {
     });
   }
 }
-
-module.exports = NotificationObserver;

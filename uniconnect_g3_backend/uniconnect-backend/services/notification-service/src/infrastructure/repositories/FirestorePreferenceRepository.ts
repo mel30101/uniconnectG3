@@ -1,14 +1,16 @@
-class FirestorePreferenceRepository {
-  constructor(db) {
+import * as admin from 'firebase-admin';
+import { IPreferenceRepository, UserPreferences } from '../../application/use-cases/SendNotification';
+
+export class FirestorePreferenceRepository implements IPreferenceRepository {
+  private db: admin.firestore.Firestore;
+  private collectionName: string;
+
+  constructor(db: admin.firestore.Firestore) {
     this.db = db;
     this.collectionName = 'notification_preferences';
   }
 
-  /**
-   * Gets user notification preferences.
-   * Returns a default object if no preferences are found.
-   */
-  async getPreferences(userId) {
+  async getPreferences(userId: string): Promise<UserPreferences> {
     try {
       const doc = await this.db.collection(this.collectionName).doc(userId).get();
       
@@ -23,10 +25,17 @@ class FirestorePreferenceRepository {
         };
       }
 
-      return doc.data();
+      const data = doc.data() || {};
+      return {
+        userId,
+        enabledChannels: data.enabledChannels || {
+          in_app: true,
+          email: true,
+          push: true
+        }
+      };
     } catch (error) {
       console.error(`Error fetching preferences for user ${userId}:`, error);
-      // Fallback to default
       return {
         userId,
         enabledChannels: {
@@ -38,5 +47,3 @@ class FirestorePreferenceRepository {
     }
   }
 }
-
-module.exports = FirestorePreferenceRepository;
