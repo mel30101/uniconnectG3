@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 export interface DecodedUser {
@@ -9,10 +9,14 @@ export interface DecodedUser {
 }
 
 export interface AuthenticatedRequest {
+  cookies?: {
+    uniconnect_token?: string;
+    [key: string]: string | undefined;
+  };
   user?: DecodedUser;
 }
 
-export const authMiddleware = (req: any, res: Response, next: NextFunction) => {
+export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
   // 1. Intentar obtener el token de las cookies (Web)
   let token = req.cookies?.uniconnect_token;
 
@@ -36,7 +40,7 @@ export const authMiddleware = (req: any, res: Response, next: NextFunction) => {
   // 4. Verificar el JWT usando la misma firma para Web y Móvil
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || '') as DecodedUser;
-    req.user = decoded; // Adjuntar payload decodificado al req.user
+    (req as Request & { user?: DecodedUser }).user = decoded; // Adjuntar payload decodificado al req.user
     next();
   } catch (error) {
     return res.status(401).json({ 

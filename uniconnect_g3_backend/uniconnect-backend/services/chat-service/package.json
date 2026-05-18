@@ -2,10 +2,11 @@
   "name": "@uniconnect/chat-service",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "dev": "nodemon index.js",
-    "start": "node index.js",
+    "dev": "cross-env TS_NODE_COMPILER_OPTIONS=\"{\\\"ignoreDeprecations\\\":\\\"6.0\\\"}\" ts-node-dev --respawn --transpile-only index.ts",
+    "build": "tsc --ignoreDeprecations 6.0",
+    "start": "node dist/index.js",
     "test:unit": "cross-env NODE_ENV=test jest tests/unit --runInBand --forceExit",
     "test:integration": "jest tests/integration/ChatObserver.test.js"
   },
@@ -24,5 +25,14 @@
     "socket.io": "^4.7.5",
     "socket.io-client": "^4.8.3",
     "streamifier": "^0.1.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.13.4",
+    "cross-env": "^7.0.3",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^6.0.3"
   }
 }
