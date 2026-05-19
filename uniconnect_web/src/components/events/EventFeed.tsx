@@ -210,9 +210,9 @@ export default function EventFeed() {
           {categories.map(cat => (
             <button
               key={cat.id}
-              onClick={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
+              onClick={() => setSelectedCategory(selectedCategory === cat.name ? null : cat.name)}
               className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${
-                selectedCategory === cat.id
+                selectedCategory === cat.name
                   ? 'bg-[#002344] text-white border-[#002344]'
                   : 'bg-white text-gray-600 border-gray-200 hover:border-[#002344]'
               }`}
