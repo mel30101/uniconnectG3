@@ -15,7 +15,10 @@
     "build:web": "pnpm --filter uniconnect_web build",
     "build:shared": "pnpm --filter @uniconnect/shared build",
     "lint": "pnpm -r lint",
-    "type-check": "pnpm -r type-check",
+    "generate:spec": "pnpm --filter @uniconnect/gateway run generate:spec",
+    "generate:types": "pnpm --filter @uniconnect/api-types run generate:types",
+    "generate:contracts": "pnpm --filter @uniconnect/api-types run build && pnpm run generate:spec && pnpm run generate:types",
+    "type-check": "pnpm -r exec tsc --noEmit",
     "clean": "pnpm -r clean && rm -rf node_modules"
   },
   "engines": {

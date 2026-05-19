@@ -16,3 +16,14 @@ export const NotificationSchema = z.object({
 });
 
 export type NotificationInputDTO = z.infer<typeof NotificationSchema>;
+
+// Request and parameter validation schemas
+export const NotifyRequestSchema = z.object({
+  event: z.string().min(1, 'El event es requerido'),
+  payload: z.record(z.string(), z.unknown())
+});
+
+export const MarkReadRequestSchema = z.object({
+  authUserId: z.string().min(1, 'El authUserId/userId es requerido')
+});
+

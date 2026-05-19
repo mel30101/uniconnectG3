@@ -1,5 +1,5 @@
 import { registry } from '../registry';
-import { NotificationSchema } from '../../../../services/notification-service/src/domain/dtos/NotificacionDTO';
+import { NotificationSchema } from '@uniconnect/api-types/dist/schemas/notification.schema';
 import { z } from 'zod';
 
 // Register models
@@ -118,5 +118,29 @@ registry.registerPath({
     200: {
       description: 'Notificación marcada como leída exitosamente',
     },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/notifications/user/{userId}/read-all',
+  summary: 'Marcar todas las notificaciones de un usuario como leídas',
+  tags: ['Notificaciones'],
+  request: {
+    params: z.object({
+      userId: z.string().openapi({ description: 'ID de Firebase del usuario' })
+    })
+  },
+  responses: {
+    200: {
+      description: 'Todas las notificaciones marcadas como leídas',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean()
+          })
+        }
+      }
+    }
   },
 });

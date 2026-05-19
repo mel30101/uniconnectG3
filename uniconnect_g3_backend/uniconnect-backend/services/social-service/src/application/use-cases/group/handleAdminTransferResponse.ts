@@ -53,9 +53,10 @@ export class HandleAdminTransferResponse {
           });
 
           return { success: true, message: 'Transferencia completada. Estado: TransferenciaAceptada' };
-        } catch (error: any) {
+        } catch (error: unknown) {
           member.transitionTo('PendienteTransferencia');
-          throw new Error('Fallo en la persistencia, el estado se ha revertido: ' + error.message);
+          const errMsg = error instanceof Error ? error.message : String(error);
+          throw new Error('Fallo en la persistencia, el estado se ha revertido: ' + errMsg);
         }
       }
     } else if (action === 'reject') {
@@ -65,9 +66,10 @@ export class HandleAdminTransferResponse {
         try {
           await this.groupRepo.update(groupId, { pendingAdminTransfer: null });
           return { success: true, message: 'Solicitud de transferencia rechazada. Estado regresó a Activo.' };
-        } catch (error: any) {
+        } catch (error: unknown) {
           member.transitionTo('PendienteTransferencia');
-          throw new Error('Fallo en la persistencia del rechazo, estado revertido: ' + error.message);
+          const errMsg = error instanceof Error ? error.message : String(error);
+          throw new Error('Fallo en la persistencia del rechazo, estado revertido: ' + errMsg);
         }
       }
     }

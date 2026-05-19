@@ -4,8 +4,7 @@ import jwt from 'jsonwebtoken';
 import { IUserRepository } from '../../../domain/repositories';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 
-// Dynamic ESM import helper for CommonJS to prevent CJS compilation and runtime require errors
-const getShared = () => Function('return import("@uniconnect/shared")')() as Promise<typeof import('@uniconnect/shared')>;
+import { LoginRequestSchema, RegisterRequestSchema } from '@uniconnect/api-types/dist/schemas/auth.schema';
 
 export class AuthController {
   private userRepo: IUserRepository;
@@ -26,11 +25,8 @@ export class AuthController {
   }
 
   async login(req: Request, res: Response) {
-    // 1. Cargar dinámicamente el esquema de validación ESM
-    const { LoginSchema } = await getShared();
-
-    // 2. Validar usando LoginSchema de Zod
-    const validatedData = LoginSchema.parse(req.body);
+    // Validate using LoginRequestSchema of Zod
+    const validatedData = LoginRequestSchema.parse(req.body);
 
     try {
       // 3. Obtener el usuario de Firebase Auth por email
@@ -67,11 +63,8 @@ export class AuthController {
   }
 
   async register(req: Request, res: Response) {
-    // 1. Cargar dinámicamente el esquema de validación ESM
-    const { RegisterSchema } = await getShared();
-
-    // 2. Validar usando RegisterSchema de Zod
-    const validatedData = RegisterSchema.parse(req.body);
+    // Validate using RegisterRequestSchema of Zod
+    const validatedData = RegisterRequestSchema.parse(req.body);
 
     // 3. Validar que el dominio sea @ucaldas.edu.co
     if (!validatedData.email.endsWith('@ucaldas.edu.co')) {

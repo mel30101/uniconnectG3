@@ -6,7 +6,7 @@ import {
   SearchStudentsResponseSchema,
   AcademicProfileSchema,
   EstadisticasSchema
-} from '../../../../services/user-service/src/domain/dtos/schemas';
+} from '@uniconnect/api-types/dist/schemas/user.schema';
 
 // Register models
 const OpenAPIUser = registry.register('UserProfile', UserSchema);

@@ -18,7 +18,7 @@ class EventoUniversidadSubject extends ISubject {
     }
   }
 
-  notify(event: string, data: any): void {
+  notify(event: string, data: Record<string, unknown>): void {
     for (const observer of this.observers) {
       observer.update(event, data);
     }

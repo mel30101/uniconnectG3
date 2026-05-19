@@ -1,26 +1,50 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../middlewares/errorMiddleware';
+import { SocialSchemas } from '@uniconnect/api-types';
+
+interface UseCase {
+  execute(...args: any[]): Promise<any>;
+}
+
+export interface GroupUseCases {
+  createGroup: UseCase;
+  getUserGroups: UseCase;
+  getGroupById: UseCase;
+  searchGroups: UseCase;
+  checkGroupNameUnique: UseCase;
+  sendJoinRequest: UseCase;
+  getGroupRequests: UseCase;
+  handleRequestAction: UseCase;
+  removeMember: UseCase;
+  transferAdmin: UseCase;
+  addMember: UseCase;
+  leaveGroup: UseCase;
+  getAvailableStudents: UseCase;
+  deleteUserRequests: UseCase;
+  requestAdminTransfer: UseCase;
+  handleAdminTransferResponse: UseCase;
+}
 
 export class GroupController {
-  private createGroupUC: any;
-  private getUserGroupsUC: any;
-  private getGroupByIdUC: any;
-  private searchGroupsUC: any;
-  private checkGroupNameUniqueUC: any;
-  private sendJoinRequestUC: any;
-  private getGroupRequestsUC: any;
-  private handleRequestActionUC: any;
-  private removeMemberUC: any;
-  private transferAdminUC: any;
-  private addMemberUC: any;
-  private leaveGroupUC: any;
-  private getAvailableStudentsUC: any;
-  private deleteUserRequestsUC: any;
-  private requestAdminTransferUC: any;
-  private handleAdminTransferResponseUC: any;
+  private createGroupUC: UseCase;
+  private getUserGroupsUC: UseCase;
+  private getGroupByIdUC: UseCase;
+  private searchGroupsUC: UseCase;
+  private checkGroupNameUniqueUC: UseCase;
+  private sendJoinRequestUC: UseCase;
+  private getGroupRequestsUC: UseCase;
+  private handleRequestActionUC: UseCase;
+  private removeMemberUC: UseCase;
+  private transferAdminUC: UseCase;
+  private addMemberUC: UseCase;
+  private leaveGroupUC: UseCase;
+  private getAvailableStudentsUC: UseCase;
+  private deleteUserRequestsUC: UseCase;
+  private requestAdminTransferUC: UseCase;
+  private handleAdminTransferResponseUC: UseCase;
   private static instance: GroupController;
 
-  constructor(useCases: any) {
+  constructor(useCases: GroupUseCases) {
     this.createGroupUC = useCases.createGroup;
     this.getUserGroupsUC = useCases.getUserGroups;
     this.getGroupByIdUC = useCases.getGroupById;
@@ -40,7 +64,8 @@ export class GroupController {
   }
 
   createGroup = asyncHandler(async (req: Request, res: Response) => {
-    const result = await this.createGroupUC.execute(req.body);
+    const validatedData = SocialSchemas.CreateGroupRequestSchema.parse(req.body);
+    const result = await this.createGroupUC.execute(validatedData);
     res.status(201).json(result);
   });
 
@@ -61,12 +86,14 @@ export class GroupController {
   });
 
   searchGroups = asyncHandler(async (req: Request, res: Response) => {
-    const { subjectId, search, userSubjectIds, userId } = req.query;
+    const validatedQuery = SocialSchemas.SearchGroupsQuerySchema.parse(req.query);
+    const userSubjectIds = req.query.userSubjectIds as string;
+    const userId = req.query.userId as string;
     const groups = await this.searchGroupsUC.execute({
-      subjectId: subjectId as string,
-      search: search as string,
-      userSubjectIds: userSubjectIds as string,
-      userId: userId as string
+      subjectId: validatedQuery.subjectId,
+      search: validatedQuery.query,
+      userSubjectIds,
+      userId
     });
     res.json(groups);
   });
@@ -77,7 +104,8 @@ export class GroupController {
   });
 
   sendJoinRequest = asyncHandler(async (req: Request, res: Response) => {
-    const result = await this.sendJoinRequestUC.execute(req.params.id, req.body);
+    const validatedData = SocialSchemas.JoinGroupRequestSchema.parse(req.body);
+    const result = await this.sendJoinRequestUC.execute(req.params.id, validatedData);
     res.status(200).json(result);
   });
 
@@ -87,7 +115,8 @@ export class GroupController {
   });
 
   handleRequestAction = asyncHandler(async (req: Request, res: Response) => {
-    const result = await this.handleRequestActionUC.execute(req.params.id, req.params.requestId, req.body.status);
+    const { status } = SocialSchemas.HandleJoinRequestSchema.parse(req.body);
+    const result = await this.handleRequestActionUC.execute(req.params.id, req.params.requestId, status);
     res.status(200).json(result);
   });
 
@@ -97,25 +126,28 @@ export class GroupController {
   });
 
   transferAdmin = asyncHandler(async (req: Request, res: Response) => {
-    const { adminId, newAdminId } = req.body;
+    const { adminId, newAdminId } = SocialSchemas.TransferAdminRequestSchema.parse(req.body);
     await this.transferAdminUC.execute(req.params.id, adminId, newAdminId);
     res.status(200).json({ message: "Administración cedida con éxito." });
   });
 
   requestAdminTransfer = asyncHandler(async (req: Request, res: Response) => {
-    const { adminId, candidateId } = req.body;
+    const { adminId, candidateId } = SocialSchemas.RequestAdminTransferSchema.parse(req.body);
     const result = await this.requestAdminTransferUC.execute(req.params.id, adminId, candidateId);
     res.status(200).json(result);
   });
 
   handleAdminTransferResponse = asyncHandler(async (req: Request, res: Response) => {
-    const { candidateId, action } = req.body;
+    const { status } = SocialSchemas.AdminTransferResponseSchema.parse(req.body);
+    const { candidateId } = req.body;
+    const action = status === 'ACEPTADA' ? 'accept' : 'reject';
     const result = await this.handleAdminTransferResponseUC.execute(req.params.id, candidateId, action);
     res.status(200).json(result);
   });
 
   addMember = asyncHandler(async (req: Request, res: Response) => {
-    const result = await this.addMemberUC.execute(req.params.id, req.body);
+    const validatedData = SocialSchemas.AddMemberRequestSchema.parse(req.body);
+    const result = await this.addMemberUC.execute(req.params.id, validatedData);
     res.status(201).json(result);
   });
 
@@ -136,7 +168,7 @@ export class GroupController {
     res.status(200).json(students);
   });
 
-  static getInstance(useCases: any) {
+  static getInstance(useCases: GroupUseCases) {
     if (!GroupController.instance) {
       GroupController.instance = new GroupController(useCases);
     } 
@@ -144,3 +176,4 @@ export class GroupController {
   }
 }
 export default GroupController;
+

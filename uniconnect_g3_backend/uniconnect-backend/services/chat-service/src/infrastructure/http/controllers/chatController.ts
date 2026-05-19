@@ -6,6 +6,7 @@ import { SendFileMessage } from '../../../application/use-cases/sendFileMessage'
 import { GetMessages } from '../../../application/use-cases/getMessages';
 import { AddReaction } from '../../../application/use-cases/addReaction';
 import { MulterFile } from '../../../application/validations/BaseHandler';
+import { ChatSchemas } from '@uniconnect/api-types';
 
 interface ChatControllerDeps {
   getOrCreateChat: GetOrCreateChat;
@@ -31,50 +32,63 @@ export class ChatController {
   }
 
   createChat = asyncHandler(async (req: Request, res: Response) => {
-    const { userA, userB } = req.body;
-    if (!userA || !userB) {
-      return res.status(400).json({ error: "faltan usuarios" });
-    }
+    const bodyToValidate = req.body.participants
+      ? req.body
+      : { participants: [req.body.userA, req.body.userB].filter(Boolean) };
+
+    const { participants } = ChatSchemas.CreateChatRequestSchema.parse(bodyToValidate);
+    const [userA, userB] = participants;
     const chatId = await this.getOrCreateChatUC.execute(userA, userB);
     res.json({ chatId });
   });
 
   sendMessage = asyncHandler(async (req: Request, res: Response) => {
-    const { chatId } = req.params;
-    const { senderId, text } = req.body;
-    if (!senderId || !text) {
-      return res.status(400).json({ error: "Datos incompletos" });
-    }
-    await this.sendMessageUC.execute(chatId as string, senderId, text);
+    const { chatId } = ChatSchemas.ChatIdParamSchema.parse(req.params);
+    const validatedBody = ChatSchemas.SendChatMessageRequestSchema.parse({
+      senderId: req.body.senderId,
+      content: req.body.text,
+      type: 'text'
+    });
+
+    await this.sendMessageUC.execute(chatId, validatedBody.senderId, validatedBody.content);
     res.sendStatus(200);
   });
 
   sendFileMessage = asyncHandler(async (req: Request, res: Response) => {
-    const { chatId } = req.params;
-    const { senderId, text } = req.body;
+    const { chatId } = ChatSchemas.ChatIdParamSchema.parse(req.params);
     const file = (req as Request & { file?: MulterFile }).file;
     if (!file) {
       return res.status(400).json({ error: "Archivo no subido" });
     }
-    const result = await this.sendFileMessageUC.execute(chatId as string, senderId, file, text);
+
+    const validatedBody = ChatSchemas.SendChatMessageRequestSchema.parse({
+      senderId: req.body.senderId,
+      content: req.body.text || '',
+      type: 'file',
+      fileURL: file.path,
+      fileName: file.originalname,
+      fileSize: file.size
+    });
+
+    const result = await this.sendFileMessageUC.execute(chatId, validatedBody.senderId, file, validatedBody.content);
     res.json(result);
   });
 
   getMessage = asyncHandler(async (req: Request, res: Response) => {
-    const { chatId } = req.params;
-    const messages = await this.getMessagesUC.execute(chatId as string);
+    const { chatId } = ChatSchemas.ChatIdParamSchema.parse(req.params);
+    const messages = await this.getMessagesUC.execute(chatId);
     res.json({ messages });
   });
 
   addReaction = asyncHandler(async (req: Request, res: Response) => {
-    const { chatId, messageId } = req.params;
-    const { emoji, userId } = req.body;
+    const { chatId, messageId } = ChatSchemas.ChatMessageParamsSchema.parse(req.params);
+    const validatedBody = ChatSchemas.AddChatReactionRequestSchema.parse({
+      userId: req.body.userId,
+      reaction: req.body.emoji
+    });
 
-    if (!emoji || !userId) {
-      return res.status(400).json({ error: "Datos de reacción incompletos" });
-    }
-
-    const result = await this.addReactionUC.execute(chatId as string, messageId as string, emoji, userId);
+    const result = await this.addReactionUC.execute(chatId, messageId, validatedBody.reaction, validatedBody.userId);
     res.json(result);
   });
 }
+

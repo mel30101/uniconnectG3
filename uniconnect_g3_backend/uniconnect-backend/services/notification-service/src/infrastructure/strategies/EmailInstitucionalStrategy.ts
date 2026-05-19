@@ -75,14 +75,15 @@ export class EmailInstitucionalStrategy implements INotificacionStrategy {
         messageId: response[0]?.headers['x-message-id'] || 'sent'
       };
 
-    } catch (error: any) {
-      const errMsg = error.response?.body || error.message || String(error);
+    } catch (error: unknown) {
+      const err = error as { response?: { body?: unknown }; message?: string };
+      const errMsg = err.response?.body || err.message || String(error);
       console.error('[EmailStrategy] Failed to dispatch email:', errMsg);
       
       return {
         canal: 'email',
         enviado: false,
-        error: error.message || 'SENDGRID_DISPATCH_FAILURE'
+        error: err.message || 'SENDGRID_DISPATCH_FAILURE'
       };
     }
   }

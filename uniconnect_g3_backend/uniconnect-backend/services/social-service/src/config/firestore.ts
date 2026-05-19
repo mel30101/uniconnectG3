@@ -3,7 +3,7 @@ import * as admin from 'firebase-admin';
 class DatabaseSingleton {
   public static instance: DatabaseSingleton;
   public firestoreDb!: admin.firestore.Firestore;
-  public relationalDb: any = null;
+  public relationalDb: unknown = null;
 
   constructor() {
     if (DatabaseSingleton.instance) {
@@ -55,7 +55,7 @@ class DatabaseSingleton {
     return this.firestoreDb;
   }
 
-  public getRelationalDb(): any {
+  public getRelationalDb(): unknown {
     if (!this.relationalDb) {
       throw new Error("Relational database not initialized yet");
     }

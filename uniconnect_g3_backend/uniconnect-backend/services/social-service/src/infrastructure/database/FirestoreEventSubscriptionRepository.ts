@@ -50,7 +50,7 @@ export class FirestoreEventSubscriptionRepository implements IEventSubscriptionR
     }
   }
 
-  async findByUser(userId: string): Promise<any[]> {
+  async findByUser(userId: string): Promise<{ categoryId: string }[]> {
     const subs = await this.getSubscriptionsByUser(userId);
     return subs.map(sub => ({ categoryId: sub }));
   }

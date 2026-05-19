@@ -3,7 +3,7 @@ import { PrioridadDecorator } from '../../domain/decorators/PrioridadDecorator';
 import { AccionDecorator } from '../../domain/decorators/AccionDecorator';
 import NotificationRules from '../../domain/rules/NotificationRules';
 import { INotificacionStrategy, StrategyResult } from '../../domain/strategies/INotificacionStrategy';
-import { NotificationSchema } from '../../domain/dtos/NotificacionDTO';
+import { NotificationSchema } from '@uniconnect/api-types/dist/schemas/notification.schema';
 import { INotificacion, INotificacionDTO } from '../../domain/entities/INotificacion';
 
 export interface UserPreferences {

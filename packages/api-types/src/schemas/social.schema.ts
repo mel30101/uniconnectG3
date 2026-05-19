@@ -73,3 +73,25 @@ export const CategorySchema = z.object({
   name: z.string(),
   description: z.string().optional()
 });
+
+// Request, query, and parameter validation schemas
+export const RequestAdminTransferSchema = z.object({
+  adminId: z.string().min(1, 'El adminId es requerido'),
+  candidateId: z.string().min(1, 'El candidateId es requerido'),
+});
+
+export const AddMemberRequestSchema = z.object({
+  userId: z.string().min(1, 'El userId es requerido'),
+  userName: z.string().min(1, 'El userName es requerido'),
+});
+
+export const SearchGroupsQuerySchema = z.object({
+  query: z.string().optional(),
+  subjectId: z.string().optional(),
+});
+
+export const UnsubscribeCategoryQuerySchema = z.object({
+  userId: z.string().min(1, 'El userId es requerido'),
+  categoryId: z.string().min(1, 'El categoryId es requerido'),
+});
+

@@ -3,6 +3,8 @@ import * as dotenv from 'dotenv';
 import * as http from 'http';
 import express, { Request, Response } from 'express';
 import { Server } from 'socket.io';
+import { z, ZodError } from 'zod';
+import { NotificationSchemas, UserSchemas } from '@uniconnect/api-types';
 
 dotenv.config();
 
@@ -81,53 +83,53 @@ const PORT = process.env.NOTIFICATION_PORT || 3006;
 
 // ─── POST /notify ─────────────────────────────────────────────
 app.post('/notify', async (req: Request, res: Response) => {
-  const { event, payload } = req.body;
   try {
+    const { event, payload } = NotificationSchemas.NotifyRequestSchema.parse(req.body);
     let result: NotificationResult | undefined;
     switch (event) {
       case 'SOLICITUD_INGRESO':
         result = await notificationObserver.onGroupRequest(
-          payload.targetUserId, payload.userName, payload.groupName, payload.groupId, payload.requestId
+          payload.targetUserId as string, payload.userName as string, payload.groupName as string, payload.groupId as string, payload.requestId as string
         );
         break;
       case 'SOLICITUD_ACEPTADA':
         result = await notificationObserver.onGroupRequestHandled(
-          payload.userId, true, payload.groupName, payload.groupId
+          payload.userId as string, true, payload.groupName as string, payload.groupId as string
         );
         break;
       case 'SOLICITUD_RECHAZADA':
         result = await notificationObserver.onGroupRequestHandled(
-          payload.userId, false, payload.groupName, payload.groupId
+          payload.userId as string, false, payload.groupName as string, payload.groupId as string
         );
         break;
       case 'TRANSFER_ADMIN':
         result = await notificationObserver.onAdminTransfer(
-          payload.userId, payload.groupName, payload.groupId
+          payload.userId as string, payload.groupName as string, payload.groupId as string
         );
         break;
       case 'TRANSFER_ADMIN_SOLICITADA':
         result = await notificationObserver.onAdminTransferRequested(
-          payload.userId, payload.userName, payload.groupName, payload.groupId
+          payload.userId as string, payload.userName as string, payload.groupName as string, payload.groupId as string
         );
         break;
       case 'TRANSFER_ADMIN_ACEPTADA':
         result = await notificationObserver.onAdminTransferAccepted(
-          payload.userId, payload.userName, payload.groupName, payload.groupId
+          payload.userId as string, payload.userName as string, payload.groupName as string, payload.groupId as string
         );
         break;
       case 'TRANSFER_ADMIN_RECHAZADA':
         result = await notificationObserver.onAdminTransferRejected(
-          payload.userId, payload.userName, payload.groupName, payload.groupId
+          payload.userId as string, payload.userName as string, payload.groupName as string, payload.groupId as string
         );
         break;
       case 'MENCION':
         result = await notificationObserver.onMention(
-          payload.userId, payload.senderName, payload.groupName, payload.message, payload.groupId
+          payload.userId as string, payload.senderName as string, payload.groupName as string, payload.message as string, payload.groupId as string
         );
         break;
       case 'NUEVO_EVENTO':
         result = await notificationObserver.onNewEvent(
-          payload.userId, payload.categoryName, payload.eventTitle, payload.eventId
+          payload.userId as string, payload.categoryName as string, payload.eventTitle as string, payload.eventId as string
         );
         break;
       default:
@@ -136,6 +138,17 @@ app.post('/notify', async (req: Request, res: Response) => {
     }
     res.json({ success: true, result });
   } catch (error: unknown) {
+    if (error instanceof ZodError) {
+      res.status(400).json({
+        error: true,
+        message: 'Datos de entrada inválidos',
+        details: error.errors.map(e => ({
+          field: e.path.join('.'),
+          message: e.message
+        }))
+      });
+      return;
+    }
     const errMsg = error instanceof Error ? error.message : String(error);
     console.error('[NotificationService] Error:', error);
     res.status(500).json({ error: errMsg });
@@ -145,12 +158,23 @@ app.post('/notify', async (req: Request, res: Response) => {
 // ─── GET /notifications/:userId ───────────────────────────────
 app.get('/notifications/:userId', async (req: Request, res: Response) => {
   try {
-    const userId = req.params.userId as string;
+    const { userId } = UserSchemas.UserIdParamSchema.parse(req.params);
     const requestedLimit = parseInt(req.query.limit as string) || 20;
     const limit = Math.min(requestedLimit, 50);
     const notifications = await notificationRepo.findByUserId(userId, limit);
     res.json({ success: true, data: notifications });
   } catch (error: unknown) {
+    if (error instanceof ZodError) {
+      res.status(400).json({
+        error: true,
+        message: 'Datos de entrada inválidos',
+        details: error.errors.map(e => ({
+          field: e.path.join('.'),
+          message: e.message
+        }))
+      });
+      return;
+    }
     const errMsg = error instanceof Error ? error.message : String(error);
     console.error('[NotificationService] Error getting notifications:', error);
     res.status(500).json({ error: errMsg });
@@ -160,10 +184,21 @@ app.get('/notifications/:userId', async (req: Request, res: Response) => {
 // ─── GET /notifications/:userId/unread-count ──────────────────
 app.get('/notifications/:userId/unread-count', async (req: Request, res: Response) => {
   try {
-    const userId = req.params.userId as string;
+    const { userId } = UserSchemas.UserIdParamSchema.parse(req.params);
     const count = await notificationRepo.countUnread(userId);
     res.json({ success: true, unreadCount: count });
   } catch (error: unknown) {
+    if (error instanceof ZodError) {
+      res.status(400).json({
+        error: true,
+        message: 'Datos de entrada inválidos',
+        details: error.errors.map(e => ({
+          field: e.path.join('.'),
+          message: e.message
+        }))
+      });
+      return;
+    }
     const errMsg = error instanceof Error ? error.message : String(error);
     console.error('[NotificationService] Error counting unread notifications:', error);
     res.status(500).json({ error: errMsg });
@@ -173,17 +208,25 @@ app.get('/notifications/:userId/unread-count', async (req: Request, res: Respons
 // ─── PATCH /notifications/:id/read ────────────────────────────
 app.patch('/notifications/:id/read', async (req: Request, res: Response) => {
   try {
-    const id = req.params.id as string;
-    const authUserId = req.body.authUserId || req.body.userId;
-    
-    if (!authUserId) {
-      res.status(400).json({ error: 'Falta authUserId en el cuerpo de la petición' });
-      return;
-    }
+    const { id } = z.object({ id: z.string().min(1, 'El id es requerido') }).parse(req.params);
+    const { authUserId } = NotificationSchemas.MarkReadRequestSchema.parse({
+      authUserId: req.body.authUserId || req.body.userId
+    });
 
     await markNotificationAsReadUseCase.execute(id, authUserId);
     res.json({ success: true });
   } catch (error: unknown) {
+    if (error instanceof ZodError) {
+      res.status(400).json({
+        error: true,
+        message: 'Datos de entrada inválidos',
+        details: error.errors.map(e => ({
+          field: e.path.join('.'),
+          message: e.message
+        }))
+      });
+      return;
+    }
     const errMsg = error instanceof Error ? error.message : String(error);
     console.error('[NotificationService] Error marking as read:', error);
     const status = errMsg === 'UNAUTHORIZED' ? 403 : (errMsg === 'NOTIFICATION_NOT_FOUND' ? 404 : 500);
@@ -194,10 +237,21 @@ app.patch('/notifications/:id/read', async (req: Request, res: Response) => {
 // ─── PATCH /notifications/user/:userId/read-all ───────────────
 app.patch('/notifications/user/:userId/read-all', async (req: Request, res: Response) => {
   try {
-    const userId = req.params.userId as string;
+    const { userId } = UserSchemas.UserIdParamSchema.parse(req.params);
     await notificationRepo.markAllAsRead(userId);
     res.json({ success: true });
   } catch (error: unknown) {
+    if (error instanceof ZodError) {
+      res.status(400).json({
+        error: true,
+        message: 'Datos de entrada inválidos',
+        details: error.errors.map(e => ({
+          field: e.path.join('.'),
+          message: e.message
+        }))
+      });
+      return;
+    }
     const errMsg = error instanceof Error ? error.message : String(error);
     console.error('[NotificationService] Error marking all as read:', error);
     res.status(500).json({ error: errMsg });
@@ -212,3 +266,4 @@ server.listen(PORT, () => {
 });
 
 export { notificationObserver };
+

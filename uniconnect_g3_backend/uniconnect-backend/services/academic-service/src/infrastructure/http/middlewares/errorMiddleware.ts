@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import logger from '../../../config/logger';
+import { ZodError } from 'zod';
 
 // Captura errores de funciones async automáticamente
 export const asyncHandler = (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
@@ -7,7 +8,19 @@ export const asyncHandler = (fn: Function) => (req: Request, res: Response, next
 };
 
 // Manejador central de errores
-export const globalErrorHandler = (err: Error, _req: Request, res: Response, _next: NextFunction) => {
+export const globalErrorHandler = (err: Error | any, _req: Request, res: Response, _next: NextFunction) => {
+  if (err instanceof ZodError) {
+    res.status(400).json({
+      error: true,
+      message: 'Datos de entrada inválidos',
+      details: err.errors.map(e => ({
+        field: e.path.join('.'),
+        message: e.message
+      }))
+    });
+    return;
+  }
+
   const errorMap: Record<string, number> = {
     // 400 Bad Request
     'GROUP_NAME_ALREADY_EXISTS': 400,

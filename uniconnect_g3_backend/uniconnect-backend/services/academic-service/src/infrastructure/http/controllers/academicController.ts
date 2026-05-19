@@ -7,6 +7,7 @@ import { GetCareersByPath } from '../../../application/use-cases/getCareersByPat
 import { GetAllCareers } from '../../../application/use-cases/getAllCareers';
 import { GetAllSubjects } from '../../../application/use-cases/getAllSubjects';
 import { GetCareerStructure } from '../../../application/use-cases/getCareerStructure';
+import { AcademicSchemas } from '@uniconnect/api-types';
 
 interface AcademicUseCases {
   getAllFaculties: GetAllFaculties;
@@ -43,20 +44,23 @@ export class AcademicController {
   });
 
   getAcademicLevelsByFaculty = asyncHandler(async (req: Request, res: Response) => {
-    const levels = await this.getAcademicLevelsByFacultyUC.execute(req.params.facultyId as string);
+    const { facultyId } = AcademicSchemas.FacultyIdParamSchema.parse(req.params);
+    const levels = await this.getAcademicLevelsByFacultyUC.execute(facultyId);
     res.json(levels);
   });
 
   getFormationLevels = asyncHandler(async (req: Request, res: Response) => {
-    const levels = await this.getFormationLevelsUC.execute(req.params.facultyId as string, req.params.academicLevelId as string);
+    const { facultyId, academicLevelId } = AcademicSchemas.GetFormationLevelsParamsSchema.parse(req.params);
+    const levels = await this.getFormationLevelsUC.execute(facultyId, academicLevelId);
     res.json(levels);
   });
 
   getCareersByPath = asyncHandler(async (req: Request, res: Response) => {
+    const { facultyId, academicLevelId, formationLevelId } = AcademicSchemas.GetCareersByPathParamsSchema.parse(req.params);
     const careers = await this.getCareersByPathUC.execute(
-      req.params.facultyId as string,
-      req.params.academicLevelId as string,
-      req.params.formationLevelId as string
+      facultyId,
+      academicLevelId,
+      formationLevelId
     );
     res.json(careers);
   });
@@ -75,7 +79,9 @@ export class AcademicController {
   });
 
   getCareerStructure = asyncHandler(async (req: Request, res: Response) => {
-    const structure = await this.getCareerStructureUC.execute(req.params.careerId as string);
+    const { careerId } = AcademicSchemas.CareerIdParamSchema.parse(req.params);
+    const structure = await this.getCareerStructureUC.execute(careerId);
     res.status(200).json(structure);
   });
 }
+

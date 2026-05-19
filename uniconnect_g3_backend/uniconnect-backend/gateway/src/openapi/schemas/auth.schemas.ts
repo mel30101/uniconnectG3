@@ -6,7 +6,7 @@ import {
   UserSchema,
   LogoutResponseSchema,
   ErrorResponseSchema
-} from '../../../../services/auth-service/src/domain/dtos/schemas';
+} from '@uniconnect/api-types/dist/schemas/auth.schema';
 
 // Register models
 const OpenAPIUser = registry.register('User', UserSchema);
@@ -18,7 +18,7 @@ const OpenAPILogoutResponse = registry.register('LogoutResponse', LogoutResponse
 // Register paths
 registry.registerPath({
   method: 'post',
-  path: '/api/auth/login',
+  path: '/auth/login',
   summary: 'Iniciar sesión',
   tags: ['Autenticación'],
   request: {
@@ -50,7 +50,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'post',
-  path: '/api/auth/register',
+  path: '/auth/register',
   summary: 'Registrar nuevo usuario',
   tags: ['Autenticación'],
   request: {
@@ -79,7 +79,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'post',
-  path: '/api/auth/logout',
+  path: '/auth/logout',
   summary: 'Cerrar sesión',
   tags: ['Autenticación'],
   responses: {
@@ -96,7 +96,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'get',
-  path: '/api/auth/me',
+  path: '/auth/me',
   summary: 'Obtener información de la sesión actual',
   tags: ['Autenticación'],
   responses: {

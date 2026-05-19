@@ -2,6 +2,11 @@ import { IGroupRepository, IGroupMemberRepository, IGroupRequestRepository, IAca
 import { Activo } from '../../../domain/states/Activo';
 import { PendienteTransferencia } from '../../../domain/states/PendienteTransferencia';
 
+interface GroupState {
+  getFriendlyName(): string;
+  isExitLocked(context: any, userId: string): boolean;
+}
+
 export class GetGroupById {
   private groupRepo: IGroupRepository;
   private groupMemberRepo: IGroupMemberRepository;
@@ -60,7 +65,7 @@ export class GetGroupById {
     }
 
     class GroupContext {
-      public state: any = null;
+      public state: GroupState | null = null;
       public requesterId: string | null;
 
       constructor(status: string, reqId: string | null) {
@@ -90,9 +95,10 @@ export class GetGroupById {
     let userStatus = dbStatus === 'none' ? 'none' : 'Desconocido';
     let isExitLocked = false;
 
-    if (context.getState()) {
-      userStatus = context.getState().getFriendlyName();
-      isExitLocked = context.getState().isExitLocked(context as any, userId || '');
+    const state = context.getState();
+    if (state) {
+      userStatus = state.getFriendlyName();
+      isExitLocked = state.isExitLocked(context, userId || '');
     }
 
     return {

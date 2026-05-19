@@ -3,15 +3,13 @@ import { asyncHandler } from '../middlewares/errorMiddleware';
 import GetFullProfile from '../../../application/use-cases/getFullProfile';
 import SaveAcademicProfile from '../../../application/use-cases/saveAcademicProfile';
 import GetDecoratedProfile from '../../../application/use-cases/getDecoratedProfile';
+import { UserSchemas } from '@uniconnect/api-types';
 
 interface ProfileControllerUseCases {
   getFullProfile: GetFullProfile;
   saveAcademicProfile: SaveAcademicProfile;
   getDecoratedProfile: GetDecoratedProfile;
 }
-
-// Dynamic ESM import helper for CommonJS to prevent CJS compilation errors
-const getShared = () => Function('return import("@uniconnect/shared")')() as Promise<typeof import('@uniconnect/shared')>;
 
 export default class ProfileController {
   private saveAcademicProfileUC: SaveAcademicProfile;
@@ -23,33 +21,30 @@ export default class ProfileController {
   }
 
   public getProfile = asyncHandler(async (req: Request, res: Response) => {
-    const profile = await this.getDecoratedProfileUC.execute(req.params.studentId as string, 'base');
+    const { studentId } = UserSchemas.StudentIdParamSchema.parse(req.params);
+    const profile = await this.getDecoratedProfileUC.execute(studentId, 'base');
     res.status(200).json(profile);
   });
 
   public getDecoratedProfile = asyncHandler(async (req: Request, res: Response) => {
-    const vista = (req.query.vista as string) || 'base';
-    const profile = await this.getDecoratedProfileUC.execute(req.params.studentId as string, vista);
+    const { studentId } = UserSchemas.StudentIdParamSchema.parse(req.params);
+    const { vista } = UserSchemas.GetDecoratedProfileQuerySchema.parse(req.query);
+    const profile = await this.getDecoratedProfileUC.execute(studentId, vista || 'base');
     res.status(200).json(profile);
   });
 
   public upsertProfile = asyncHandler(async (req: Request, res: Response) => {
-    const { studentId, subjects, careerId } = req.body;
-    if (!studentId || !subjects || !careerId) {
-      return res.status(400).json({ error: "Datos incompletos (studentId, subjects y careerId son requeridos)" });
-    }
+    const validatedBody = UserSchemas.SaveAcademicProfileRequestSchema.parse(req.body);
 
-    // Load ESM module dynamically
-    const { UserSchema } = await getShared();
-
-    // "Ley de Hierro" validation using @uniconnect/shared's UserSchema
+    // "Ley de Hierro" validation using UserSchema
     const payloadToValidate = {
-      uid: studentId,
-      ...req.body
+      uid: validatedBody.studentId,
+      ...validatedBody
     };
-    UserSchema.partial().parse(payloadToValidate);
+    UserSchemas.UserSchema.partial().parse(payloadToValidate);
 
-    const result = await this.saveAcademicProfileUC.execute(req.body);
+    const result = await this.saveAcademicProfileUC.execute(validatedBody);
     res.status(200).json(result);
   });
 }
+

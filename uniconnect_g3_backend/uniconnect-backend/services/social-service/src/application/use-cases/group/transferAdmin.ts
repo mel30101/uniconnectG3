@@ -22,17 +22,13 @@ export class TransferAdmin {
       throw new Error('MISSING_FIELDS');
     }
 
-    let groupDataForNotify: any = null;
-
-    await this.db.runTransaction(async (transaction) => {
+    const groupDataForNotify = await this.db.runTransaction(async (transaction) => {
       const groupRef = this.db.collection('groups').doc(groupId);
       const groupDoc = await transaction.get(groupRef);
 
       if (!groupDoc.exists) {
         throw new Error('GROUP_NOT_FOUND');
       }
-
-      groupDataForNotify = { id: groupDoc.id, ...groupDoc.data() };
 
       const currentAdminData = await this.groupMemberRepo.getRefsByGroupAndUser(groupId, adminId);
       if (!currentAdminData || currentAdminData.data.role !== 'admin') {
@@ -47,6 +43,8 @@ export class TransferAdmin {
       transaction.update(groupRef, { creatorId: newAdminId });
       transaction.update(newAdminData.ref, { role: 'admin' });
       transaction.delete(currentAdminData.ref);
+
+      return { id: groupDoc.id, ...groupDoc.data() } as { id: string; name?: string };
     });
 
     if (this.subject && groupDataForNotify) {

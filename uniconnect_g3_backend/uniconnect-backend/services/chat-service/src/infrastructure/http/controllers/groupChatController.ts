@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { SendGroupMessage } from '../../../application/use-cases/sendGroupMessage';
 import { AddGroupReaction } from '../../../application/use-cases/addGroupReaction';
 import { MulterFile } from '../../../application/validations/BaseHandler';
+import { ZodError } from 'zod';
+import { ChatSchemas } from '@uniconnect/api-types';
 
 interface GroupChatControllerDeps {
   sendGroupMessage: SendGroupMessage;
@@ -24,16 +26,28 @@ export class GroupChatController {
 
   async sendMessage(req: Request, res: Response) {
     try {
-      const { groupId } = req.params;
-      const { senderId, text } = req.body;
+      const { groupId } = ChatSchemas.GroupChatParamsSchema.parse(req.params);
+      const validatedBody = ChatSchemas.SendGroupMessageRequestSchema.parse({
+        senderId: req.body.senderId,
+        content: req.body.text,
+        type: 'text'
+      });
 
-      if (!groupId || !senderId || !text) {
-        return res.status(400).json({ error: 'Faltan parámetros requeridos (groupId, senderId, text)' });
-      }
-
-      const result = await this.sendGroupMessage.execute(groupId as string, senderId, { text, type: 'text' });
+      const result = await this.sendGroupMessage.execute(groupId, validatedBody.senderId, {
+        text: validatedBody.content,
+        type: 'text'
+      });
       res.status(201).json(result);
     } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({
+          error: 'Datos de entrada inválidos',
+          details: error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        });
+      }
       console.error('Error sending group message:', error);
       res.status(500).json({ error: 'Error al enviar mensaje grupal' });
     }
@@ -41,17 +55,34 @@ export class GroupChatController {
 
   async sendFileMessage(req: Request, res: Response) {
     try {
-      const { groupId } = req.params;
-      const { senderId, text } = req.body;
+      const { groupId } = ChatSchemas.GroupChatParamsSchema.parse(req.params);
       const file = (req as Request & { file?: MulterFile }).file;
 
-      if (!groupId || !senderId || !file) {
-        return res.status(400).json({ error: 'Faltan parámetros (groupId, senderId, file)' });
+      if (!file) {
+        return res.status(400).json({ error: 'Faltan parámetros (file)' });
       }
 
-      const result = await this.sendGroupMessage.execute(groupId as string, senderId, { text }, file);
+      const validatedBody = ChatSchemas.SendGroupMessageRequestSchema.parse({
+        senderId: req.body.senderId,
+        content: req.body.text || '',
+        type: 'file',
+        fileURL: file.path,
+        fileName: file.originalname,
+        fileSize: file.size
+      });
+
+      const result = await this.sendGroupMessage.execute(groupId, validatedBody.senderId, { text: validatedBody.content }, file);
       res.status(201).json(result);
     } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({
+          error: 'Datos de entrada inválidos',
+          details: error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        });
+      }
       console.error('Error sending group file message:', error);
       res.status(500).json({ error: 'Error al enviar archivo en grupo' });
     }
@@ -59,18 +90,27 @@ export class GroupChatController {
 
   async addGroupReaction(req: Request, res: Response) {
     try {
-      const { groupId, messageId } = req.params;
-      const { emoji, userId } = req.body;
+      const { groupId, messageId } = ChatSchemas.GroupMessageParamsSchema.parse(req.params);
+      const validatedBody = ChatSchemas.GroupReactionRequestSchema.parse({
+        userId: req.body.userId,
+        reaction: req.body.emoji
+      });
 
-      if (!groupId || !messageId || !emoji || !userId) {
-        return res.status(400).json({ error: 'Faltan parámetros (groupId, messageId, emoji, userId)' });
-      }
-
-      const result = await this.addGroupReactionUC.execute(groupId as string, messageId as string, emoji, userId);
+      const result = await this.addGroupReactionUC.execute(groupId, messageId, validatedBody.reaction, validatedBody.userId);
       res.status(200).json(result);
     } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({
+          error: 'Datos de entrada inválidos',
+          details: error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        });
+      }
       console.error('Error adding group reaction:', error);
       res.status(500).json({ error: 'Error al reaccionar al mensaje' });
     }
   }
 }
+

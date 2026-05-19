@@ -1,11 +1,24 @@
 import { Request, Response, NextFunction } from 'express';
 import logger from '../../../config/logger';
+import { ZodError } from 'zod';
 
 export const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown> | void) => (req: Request, res: Response, next: NextFunction) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
 
 export const globalErrorHandler = (err: Error, _req: Request, res: Response, _next: NextFunction): void => {
+  if (err instanceof ZodError) {
+    res.status(400).json({
+      error: true,
+      message: 'Datos de entrada inválidos',
+      details: err.errors.map(e => ({
+        field: e.path.join('.'),
+        message: e.message
+      }))
+    });
+    return;
+  }
+
   const errorMap: Record<string, number> = {
     'GROUP_NAME_ALREADY_EXISTS': 400,
     'MISSING_FIELDS': 400,

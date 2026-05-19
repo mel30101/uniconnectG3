@@ -67,7 +67,7 @@ export class FirestoreGroupMemberRepository implements IGroupMemberRepository {
     return true;
   }
 
-  async getRefsByGroupAndUser(groupId: string, userId: string): Promise<{ ref: any, data: any } | null> {
+  async getRefsByGroupAndUser(groupId: string, userId: string): Promise<{ ref: admin.firestore.DocumentReference, data: admin.firestore.DocumentData } | null> {
     const snapshot = await this.db.collection('group_members')
       .where('groupId', '==', groupId)
       .where('userId', '==', userId)

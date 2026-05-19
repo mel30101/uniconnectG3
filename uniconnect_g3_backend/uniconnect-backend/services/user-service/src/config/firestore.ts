@@ -3,7 +3,7 @@ import * as admin from 'firebase-admin';
 class DatabaseSingleton {
   private static instance: DatabaseSingleton;
   private firestoreDb!: admin.firestore.Firestore;
-  private relationalDb: any = null;
+  private relationalDb: unknown = null;
 
   constructor() {
     if (DatabaseSingleton.instance) {

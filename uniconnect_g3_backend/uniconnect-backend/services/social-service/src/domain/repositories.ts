@@ -1,6 +1,7 @@
 import { Group } from './Group';
 import { GroupMember } from './GroupMember';
 import { Event } from './Event';
+import * as admin from 'firebase-admin';
 
 export interface User {
   id?: string;
@@ -58,7 +59,7 @@ export interface IGroupMemberRepository {
   add(memberData: Partial<GroupMember>): Promise<void>;
   remove(groupId: string, userId: string): Promise<boolean>;
   updateRole(groupId: string, userId: string, newRole: string): Promise<boolean>;
-  getRefsByGroupAndUser(groupId: string, userId: string): Promise<{ ref: any, data: any } | null>;
+  getRefsByGroupAndUser(groupId: string, userId: string): Promise<{ ref: admin.firestore.DocumentReference, data: admin.firestore.DocumentData } | null>;
 }
 
 export interface IEventRepository {
@@ -73,7 +74,7 @@ export interface ICategoryRepository {
 export interface IEventSubscriptionRepository {
   subscribe(userId: string, categoryId: string): Promise<void>;
   unsubscribe(userId: string, categoryId: string): Promise<void>;
-  findByUser(userId: string): Promise<any[]>;
+  findByUser(userId: string): Promise<{ categoryId: string }[]>;
 }
 
 export interface IGroupRequestRepository {

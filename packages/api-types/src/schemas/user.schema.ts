@@ -69,3 +69,31 @@ export const SearchStudentsResponseSchema = z.object({
   page: z.number(),
   limit: z.number(),
 });
+
+// Request and route parameter validation schemas
+export const SaveAcademicProfileRequestSchema = z.object({
+  studentId: z.string().min(1, 'studentId es requerido'),
+  subjects: z.array(z.string()).min(1, 'Debe registrar al menos una materia'),
+  careerId: z.string().min(1, 'careerId es requerido'),
+});
+
+export const StudentIdParamSchema = z.object({
+  studentId: z.string().min(1, 'studentId es requerido')
+});
+
+export const GetDecoratedProfileQuerySchema = z.object({
+  vista: z.string().optional()
+});
+
+export const SearchStudentsQuerySchema = z.object({
+  query: z.string().optional(),
+  name: z.string().optional(),
+  subjectId: z.string().optional(),
+  excludeId: z.string().optional(),
+});
+
+export const UserIdParamSchema = z.object({
+  userId: z.string().min(1, 'El userId es requerido')
+});
+
+

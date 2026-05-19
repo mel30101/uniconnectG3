@@ -8,13 +8,13 @@ export class SubscribeToCategory {
   }
 
   async execute(userId: string, categoryId: string): Promise<void> {
-    const anyRepo = this.subscriptionRepo as any;
+    const anyRepo = this.subscriptionRepo as { getSubscriptionsByUser?: (userId: string) => Promise<string[]> };
     const current = anyRepo.getSubscriptionsByUser 
       ? await anyRepo.getSubscriptionsByUser(userId)
-      : (await this.subscriptionRepo.findByUser(userId)).map(sub => sub.categoryId || sub);
+      : (await this.subscriptionRepo.findByUser(userId)).map(sub => sub.categoryId);
       
     if (current.includes(categoryId)) {
-      const err: any = new Error('El estudiante ya está suscrito a esta categoría');
+      const err = new Error('El estudiante ya está suscrito a esta categoría') as Error & { code?: string };
       err.code = 'ALREADY_SUBSCRIBED';
       throw err;
     }

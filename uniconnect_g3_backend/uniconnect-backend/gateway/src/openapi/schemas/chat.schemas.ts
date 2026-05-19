@@ -8,7 +8,7 @@ import {
   AddReactionRequestSchema,
   ChatSchema,
   SuccessResponseSchema
-} from '../../../../services/chat-service/src/domain/dtos/schemas';
+} from '@uniconnect/api-types/dist/schemas/chat.schema';
 
 // Register models
 const OpenAPIMessage = registry.register('Message', MessageSchema);
@@ -19,7 +19,8 @@ const OpenAPIAddReactionRequest = registry.register('AddReactionRequest', AddRea
 const OpenAPIChat = registry.register('Chat', ChatSchema);
 const OpenAPISuccessResponse = registry.register('ChatSuccessResponse', SuccessResponseSchema);
 
-// Register paths
+// === PRIVATE & GENERAL CHATS ===
+
 registry.registerPath({
   method: 'post',
   path: '/api/chats',
@@ -85,8 +86,8 @@ registry.registerPath({
       chatId: z.string().openapi({ description: 'ID del chat o grupo' })
     }),
     query: z.object({
-      limit: z.coerce.number().optional().default(50).openapi({ description: 'Cantidad de mensajes' }),
-      before: z.string().optional().openapi({ description: 'Timestamp/ID para paginación anterior' })
+      limit: z.coerce.number().optional().default(50).openapi({ description: 'Cantidad de mensajes a recuperar' }),
+      before: z.string().optional().openapi({ description: 'Timestamp o ID para paginación hacia atrás' })
     })
   },
   responses: {
@@ -148,6 +149,106 @@ registry.registerPath({
   request: {
     params: z.object({
       chatId: z.string().openapi({ description: 'ID del chat' }),
+      messageId: z.string().openapi({ description: 'ID del mensaje' })
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: OpenAPIAddReactionRequest,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Reacción agregada exitosamente',
+      content: {
+        'application/json': {
+          schema: OpenAPISuccessResponse,
+        },
+      },
+    },
+  },
+});
+
+// === GROUP CHATS (Legacy/Specific Endpoints) ===
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/group-chats/{groupId}/messages',
+  summary: 'Enviar mensaje de texto a un chat grupal',
+  tags: ['Chats de Grupo'],
+  request: {
+    params: z.object({
+      groupId: z.string().openapi({ description: 'ID del grupo de estudio' })
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: OpenAPISendMessageRequest,
+        },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Mensaje enviado exitosamente',
+      content: {
+        'application/json': {
+          schema: OpenAPIMessage,
+        },
+      },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/group-chats/{groupId}/files',
+  summary: 'Enviar un archivo/imagen a un chat grupal',
+  tags: ['Chats de Grupo'],
+  request: {
+    params: z.object({
+      groupId: z.string().openapi({ description: 'ID del grupo de estudio' })
+    }),
+    body: {
+      content: {
+        'multipart/form-data': {
+          schema: {
+            type: 'object',
+            properties: {
+              file: {
+                type: 'string',
+                format: 'binary',
+                description: 'Archivo a subir (imagen, PDF, etc)'
+              }
+            },
+            required: ['file']
+          }
+        }
+      }
+    }
+  },
+  responses: {
+    201: {
+      description: 'Archivo subido y mensaje creado',
+      content: {
+        'application/json': {
+          schema: OpenAPIMessage,
+        },
+      },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/group-chats/{groupId}/messages/{messageId}/reactions',
+  summary: 'Agregar reacción a un mensaje de chat grupal',
+  tags: ['Chats de Grupo'],
+  request: {
+    params: z.object({
+      groupId: z.string().openapi({ description: 'ID del grupo' }),
       messageId: z.string().openapi({ description: 'ID del mensaje' })
     }),
     body: {

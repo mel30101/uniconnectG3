@@ -1,15 +1,29 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../middlewares/errorMiddleware';
+import { SocialSchemas, UserSchemas } from '@uniconnect/api-types';
+
+interface UseCase {
+  execute(...args: any[]): Promise<any>;
+}
+
+export interface EventUseCases {
+  getEvents: UseCase;
+  getCategories: UseCase;
+  subscribeToCategory: UseCase;
+  unsubscribeFromCategory: UseCase;
+  getSubscribedCategories: UseCase;
+  createEvent: UseCase;
+}
 
 export class EventController {
-  private getEventsUC: any;
-  private getCategoriesUC: any;
-  private subscribeToCategoryUC: any;
-  private unsubscribeFromCategoryUC: any;
-  private getSubscribedCategoriesUC: any;
-  private createEventUC: any;
+  private getEventsUC: UseCase;
+  private getCategoriesUC: UseCase;
+  private subscribeToCategoryUC: UseCase;
+  private unsubscribeFromCategoryUC: UseCase;
+  private getSubscribedCategoriesUC: UseCase;
+  private createEventUC: UseCase;
 
-  constructor(useCases: any) {
+  constructor(useCases: EventUseCases) {
     this.getEventsUC = useCases.getEvents;
     this.getCategoriesUC = useCases.getCategories;
     this.subscribeToCategoryUC = useCases.subscribeToCategory;
@@ -19,11 +33,8 @@ export class EventController {
   }
 
   createEvent = asyncHandler(async (req: Request, res: Response) => {
-    const eventData = req.body;
-    if (!eventData.title || !eventData.type) {
-      return res.status(400).json({ error: 'Faltan parámetros obligatorios (title, type)' });
-    }
-    const event = await this.createEventUC.execute(eventData);
+    const validatedData = SocialSchemas.CreateEventRequestSchema.parse(req.body);
+    const event = await this.createEventUC.execute(validatedData);
     res.status(201).json(event);
   });
 
@@ -39,16 +50,13 @@ export class EventController {
   });
 
   subscribe = asyncHandler(async (req: Request, res: Response) => {
-    const { userId, categoryId } = req.body;
-    if (!userId || !categoryId) {
-      return res.status(400).json({ error: 'Faltan parámetros (userId, categoryId)' });
-    }
+    const { userId, categoryId } = SocialSchemas.SubscribeCategoryRequestSchema.parse(req.body);
 
     try {
       await this.subscribeToCategoryUC.execute(userId, categoryId);
       return res.status(201).json({ message: 'Suscripción creada exitosamente' });
-    } catch (err: any) {
-      if (err.code === 'ALREADY_SUBSCRIBED') {
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'code' in err && err.code === 'ALREADY_SUBSCRIBED') {
         return res.status(409).json({ error: 'El estudiante ya está suscrito a esta categoría' });
       }
       throw err;
@@ -56,22 +64,16 @@ export class EventController {
   });
 
   unsubscribe = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.query.userId as string;
-    const categoryId = req.query.categoryId as string;
-    if (!userId || !categoryId) {
-      return res.status(400).json({ error: 'Faltan parámetros (userId, categoryId)' });
-    }
+    const { userId, categoryId } = SocialSchemas.UnsubscribeCategoryQuerySchema.parse(req.query);
     await this.unsubscribeFromCategoryUC.execute(userId, categoryId);
     return res.status(204).send();
   });
 
   getSubscribedCategories = asyncHandler(async (req: Request, res: Response) => {
-    const { userId } = req.params;
-    if (!userId) {
-      return res.status(400).json({ error: 'Falta userId' });
-    }
+    const { userId } = UserSchemas.UserIdParamSchema.parse(req.params);
     const subscriptions = await this.getSubscribedCategoriesUC.execute(userId);
     return res.status(200).json(subscriptions);
   });
 }
 export default EventController;
+

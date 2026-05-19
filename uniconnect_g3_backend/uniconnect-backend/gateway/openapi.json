@@ -1363,12 +1363,46 @@
           "userId",
           "categoryId"
         ]
+      },
+      "RequestAdminTransfer": {
+        "type": "object",
+        "properties": {
+          "adminId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "candidateId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "adminId",
+          "candidateId"
+        ]
+      },
+      "AddMemberRequest": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "userName": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "userId",
+          "userName"
+        ]
       }
     },
     "parameters": {}
   },
   "paths": {
-    "/api/auth/login": {
+    "/auth/login": {
       "post": {
         "summary": "Iniciar sesión",
         "tags": [
@@ -1403,7 +1437,7 @@
         }
       }
     },
-    "/api/auth/register": {
+    "/auth/register": {
       "post": {
         "summary": "Registrar nuevo usuario",
         "tags": [
@@ -1435,7 +1469,7 @@
         }
       }
     },
-    "/api/auth/logout": {
+    "/auth/logout": {
       "post": {
         "summary": "Cerrar sesión",
         "tags": [
@@ -1455,7 +1489,7 @@
         }
       }
     },
-    "/api/auth/me": {
+    "/auth/me": {
       "get": {
         "summary": "Obtener información de la sesión actual",
         "tags": [
@@ -1748,7 +1782,7 @@
               "type": "number",
               "nullable": true,
               "default": 50,
-              "description": "Cantidad de mensajes"
+              "description": "Cantidad de mensajes a recuperar"
             },
             "required": false,
             "name": "limit",
@@ -1757,7 +1791,7 @@
           {
             "schema": {
               "type": "string",
-              "description": "Timestamp/ID para paginación anterior"
+              "description": "Timestamp o ID para paginación hacia atrás"
             },
             "required": false,
             "name": "before",
@@ -1913,6 +1947,145 @@
             },
             "required": true,
             "name": "chatId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID del mensaje"
+            },
+            "required": true,
+            "name": "messageId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddReactionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reacción agregada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatSuccessResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/group-chats/{groupId}/messages": {
+      "post": {
+        "summary": "Enviar mensaje de texto a un chat grupal",
+        "tags": [
+          "Chats de Grupo"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID del grupo de estudio"
+            },
+            "required": true,
+            "name": "groupId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Mensaje enviado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/group-chats/{groupId}/files": {
+      "post": {
+        "summary": "Enviar un archivo/imagen a un chat grupal",
+        "tags": [
+          "Chats de Grupo"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID del grupo de estudio"
+            },
+            "required": true,
+            "name": "groupId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Archivo a subir (imagen, PDF, etc)"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Archivo subido y mensaje creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/group-chats/{groupId}/messages/{messageId}/reactions": {
+      "post": {
+        "summary": "Agregar reacción a un mensaje de chat grupal",
+        "tags": [
+          "Chats de Grupo"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID del grupo"
+            },
+            "required": true,
+            "name": "groupId",
             "in": "path"
           },
           {
@@ -2146,7 +2319,7 @@
         }
       }
     },
-    "/api/career-structure/career-structure/{careerId}": {
+    "/api/career-structure/{careerId}": {
       "get": {
         "summary": "Obtener la estructura académica de una carrera",
         "tags": [
@@ -2334,6 +2507,45 @@
         }
       }
     },
+    "/api/notifications/user/{userId}/read-all": {
+      "patch": {
+        "summary": "Marcar todas las notificaciones de un usuario como leídas",
+        "tags": [
+          "Notificaciones"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID de Firebase del usuario"
+            },
+            "required": true,
+            "name": "userId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Todas las notificaciones marcadas como leídas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/groups": {
       "post": {
         "summary": "Crear un nuevo grupo de estudio",
@@ -2361,9 +2573,191 @@
             }
           }
         }
+      },
+      "get": {
+        "summary": "Buscar grupos con filtros",
+        "tags": [
+          "Social - Grupos"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "query",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "subjectId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Lista de IDs de asignaturas del usuario separadas por comas"
+            },
+            "required": false,
+            "name": "userSubjectIds",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID de Firebase del usuario que busca"
+            },
+            "required": false,
+            "name": "userId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Búsqueda exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Group"
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
-    "/api/groups/{id}/join-requests": {
+    "/api/groups/check-name/{name}": {
+      "get": {
+        "summary": "Verificar si el nombre de grupo está disponible",
+        "tags": [
+          "Social - Grupos"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Nombre del grupo a verificar"
+            },
+            "required": true,
+            "name": "name",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Disponibilidad devuelta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isUnique": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "isUnique"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/groups/user/{userId}": {
+      "get": {
+        "summary": "Obtener los grupos de estudio de un usuario",
+        "tags": [
+          "Social - Grupos"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID de Firebase del usuario"
+            },
+            "required": true,
+            "name": "userId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filtrar por rol: admin o member"
+            },
+            "required": false,
+            "name": "role",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Grupos devueltos con éxito",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Group"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/groups/{id}": {
+      "get": {
+        "summary": "Obtener detalles de un grupo por ID",
+        "tags": [
+          "Social - Grupos"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID del grupo"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID de Firebase del usuario para verificar si es miembro"
+            },
+            "required": false,
+            "name": "userId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalles del grupo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Group"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Grupo no encontrado"
+          }
+        }
+      }
+    },
+    "/api/groups/{id}/requests": {
       "post": {
         "summary": "Enviar solicitud de unión al grupo",
         "tags": [
@@ -2391,14 +2785,394 @@
         },
         "responses": {
           "200": {
-            "description": "Solicitud enviada"
+            "description": "Solicitud enviada exitosamente"
+          }
+        }
+      },
+      "get": {
+        "summary": "Obtener solicitudes pendientes de ingreso a un grupo",
+        "tags": [
+          "Social - Grupos"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID del grupo"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de solicitudes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/groups/{id}/requests/{requestId}": {
+      "put": {
+        "summary": "Aceptar o rechazar una solicitud de ingreso",
+        "tags": [
+          "Social - Grupos"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID del grupo"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID de la solicitud"
+            },
+            "required": true,
+            "name": "requestId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandleJoinRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Acción procesada con éxito"
+          }
+        }
+      }
+    },
+    "/api/groups/{id}/requests/{userId}": {
+      "delete": {
+        "summary": "Eliminar solicitud de unión de un usuario",
+        "tags": [
+          "Social - Grupos"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID del grupo"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID de Firebase del usuario"
+            },
+            "required": true,
+            "name": "userId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitud eliminada"
+          }
+        }
+      }
+    },
+    "/api/groups/{id}/members": {
+      "post": {
+        "summary": "Agregar miembro directamente a un grupo",
+        "tags": [
+          "Social - Grupos"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID del grupo"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddMemberRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Miembro agregado exitosamente"
+          }
+        }
+      }
+    },
+    "/api/groups/{id}/members/{userId}": {
+      "delete": {
+        "summary": "Eliminar un miembro de un grupo",
+        "tags": [
+          "Social - Grupos"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID del grupo"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID de Firebase del miembro a eliminar"
+            },
+            "required": true,
+            "name": "userId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID de Firebase del administrador que realiza la acción"
+            },
+            "required": true,
+            "name": "adminId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Miembro eliminado con éxito"
+          }
+        }
+      }
+    },
+    "/api/groups/{id}/leave/{userId}": {
+      "delete": {
+        "summary": "Salir voluntariamente de un grupo de estudio",
+        "tags": [
+          "Social - Grupos"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID del grupo"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID de Firebase del usuario"
+            },
+            "required": true,
+            "name": "userId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Salida exitosa"
+          }
+        }
+      }
+    },
+    "/api/groups/{id}/transfer-admin": {
+      "put": {
+        "summary": "Ceder administración de forma directa",
+        "tags": [
+          "Social - Grupos"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID del grupo"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferAdminRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Administración cedida"
+          }
+        }
+      }
+    },
+    "/api/groups/{id}/transfer-admin/request": {
+      "post": {
+        "summary": "Solicitar transferencia de administración a un miembro",
+        "tags": [
+          "Social - Grupos"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID del grupo"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestAdminTransfer"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Solicitud de transferencia enviada exitosamente"
+          }
+        }
+      }
+    },
+    "/api/groups/{id}/transfer-admin/response": {
+      "post": {
+        "summary": "Aceptar o rechazar solicitud de transferencia de administración",
+        "tags": [
+          "Social - Grupos"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID del grupo"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminTransferResponse"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Respuesta procesada"
+          }
+        }
+      }
+    },
+    "/api/groups/{groupId}/available-students": {
+      "get": {
+        "summary": "Obtener estudiantes disponibles para agregar al grupo",
+        "tags": [
+          "Social - Grupos"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID del grupo"
+            },
+            "required": true,
+            "name": "groupId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estudiantes disponibles recuperados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "nullable": true
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/events": {
+      "get": {
+        "summary": "Obtener lista de eventos universitarios",
+        "tags": [
+          "Social - Eventos"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filtrar por ID de categoría"
+            },
+            "required": false,
+            "name": "category",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de eventos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Event"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
-        "summary": "Crear un evento universitario",
+        "summary": "Crear un nuevo evento universitario",
         "tags": [
           "Social - Eventos"
         ],
@@ -2425,9 +3199,32 @@
         }
       }
     },
-    "/api/events/subscribe": {
+    "/api/events/categories": {
+      "get": {
+        "summary": "Obtener todas las categorías de eventos",
+        "tags": [
+          "Social - Eventos"
+        ],
+        "responses": {
+          "200": {
+            "description": "Categorías devueltas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Category"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/suscribir": {
       "post": {
-        "summary": "Suscribirse a categoría de eventos",
+        "summary": "Suscribirse a una categoría de eventos",
         "tags": [
           "Social - Eventos"
         ],
@@ -2441,8 +3238,76 @@
           }
         },
         "responses": {
-          "200": {
+          "201": {
             "description": "Suscripción exitosa"
+          },
+          "409": {
+            "description": "Suscripción duplicada"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Cancelar suscripción a una categoría",
+        "tags": [
+          "Social - Eventos"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "userId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "categoryId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Cancelación exitosa"
+          }
+        }
+      }
+    },
+    "/api/events/suscripciones/{userId}": {
+      "get": {
+        "summary": "Obtener las categorías suscritas de un estudiante",
+        "tags": [
+          "Social - Eventos"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "ID de Firebase del usuario"
+            },
+            "required": true,
+            "name": "userId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de suscripciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "nullable": true
+                  }
+                }
+              }
+            }
           }
         }
       }

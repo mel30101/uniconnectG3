@@ -7,7 +7,7 @@ import {
   AcademicLevelSchema,
   FormationLevelSchema,
   AcademicMappingSchema
-} from '../../../../services/academic-service/src/domain/models';
+} from '@uniconnect/api-types/dist/schemas/academic.schema';
 
 // Register models
 const OpenAPIFaculty = registry.register('Faculty', FacultySchema);
@@ -139,7 +139,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'get',
-  path: '/api/career-structure/career-structure/{careerId}',
+  path: '/api/career-structure/{careerId}',
   summary: 'Obtener la estructura académica de una carrera',
   tags: ['Académico'],
   request: {
