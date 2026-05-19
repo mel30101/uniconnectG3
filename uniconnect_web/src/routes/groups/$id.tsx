@@ -15,7 +15,7 @@ import {
   Users, ArrowLeft, Calendar, Check, X,
   LayoutDashboard, MessageSquare, ClipboardList,
   Star, ChevronLeft, ChevronRight, MessageCircle,
-  UserPlus, Key, Trash2,
+  UserPlus, Trash2,
 } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -216,7 +216,16 @@ function GroupAdminPortal({ group, pendingRequests, onRequestAction, processingI
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-3">
                             <Avatar name={m.name} size="sm" />
-                            <span className="font-medium text-[#111827]">{m.name}</span>
+                            {m.id === user?.uid ? (
+                              <span className="font-medium text-[#111827]">{m.name}</span>
+                            ) : (
+                              <button
+                                onClick={() => navigate(`/user/${m.id}`)}
+                                className="font-medium text-[#002344] hover:underline text-left"
+                              >
+                                {m.name}
+                              </button>
+                            )}
                           </div>
                         </td>
                         <td className="px-5 py-3">
@@ -244,22 +253,13 @@ function GroupAdminPortal({ group, pendingRequests, onRequestAction, processingI
                                   <MessageCircle size={14} />
                                 </button>
                                 {m.role !== 'admin' && (
-                                  <>
-                                    <button
-                                      onClick={() => onTransferAdmin(m.id, m.name)}
-                                      title={`Transferir administración a ${m.name}`}
-                                      className="p-1 rounded-full hover:bg-[#F4F6F8] transition-colors text-[#b39055]"
-                                    >
-                                      <Key size={14} />
-                                    </button>
-                                    <button
-                                      onClick={() => onRemoveMember(m.id, m.name)}
-                                      title={`Eliminar a ${m.name}`}
-                                      className="p-1 rounded-full hover:bg-red-50 transition-colors text-red-500"
-                                    >
-                                      <Trash2 size={14} />
-                                    </button>
-                                  </>
+                                  <button
+                                    onClick={() => onRemoveMember(m.id, m.name)}
+                                    title={`Eliminar a ${m.name}`}
+                                    className="p-1 rounded-full hover:bg-red-50 transition-colors text-red-500"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
                                 )}
                               </>
                             )}
@@ -526,8 +526,22 @@ function GroupMemberView({ group, isMember, hasPendingRequest, actionLoading, on
               <div key={m.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#F4F6F8] transition-colors">
                 <Avatar name={m.name} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[#111827] truncate">{m.name}</p>
-                  <p className="text-xs text-[#6b7280]">{m.role === 'admin' ? 'Administrador' : 'Estudiante'}</p>
+                  {m.id === user?.uid ? (
+                    <>
+                      <p className="text-sm font-medium text-[#111827] truncate">{m.name}</p>
+                      <p className="text-xs text-[#6b7280]">{m.role === 'admin' ? 'Administrador' : 'Estudiante'}</p>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => navigate(`/user/${m.id}`)}
+                        className="text-sm font-medium text-[#002344] hover:underline truncate block w-full text-left"
+                      >
+                        {m.name}
+                      </button>
+                      <p className="text-xs text-[#6b7280]">{m.role === 'admin' ? 'Administrador' : 'Estudiante'}</p>
+                    </>
+                  )}
                 </div>
                 {m.id !== user?.uid && (
                   <button

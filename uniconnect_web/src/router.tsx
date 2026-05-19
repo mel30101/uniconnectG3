@@ -18,6 +18,7 @@ import ChatConversationPage from './routes/chat/$id'
 import GroupChatPage from './routes/chat/group.$groupId'
 import CareersPage from './routes/academic/careers'
 import SubjectsPage from './routes/academic/subjects'
+import ExternalProfilePage from './routes/user/$id'
 
 function NotFoundPage() {
   return (
@@ -61,6 +62,7 @@ export const router = createBrowserRouter([
       { path: 'chat/group/:groupId', element: <GroupChatPage /> },
       { path: 'academic/careers', element: <CareersPage /> },
       { path: 'academic/subjects', element: <SubjectsPage /> },
+      { path: 'user/:id', element: <ExternalProfilePage /> },
     ],
   },
 

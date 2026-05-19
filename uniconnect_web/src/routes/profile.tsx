@@ -9,7 +9,7 @@ import ProfileAcademicRead from '../components/profile/ProfileAcademicRead'
 import ProfileAcademicEdit from '../components/profile/ProfileAcademicEdit'
 import ProfileEnrichedView from '../components/profile/ProfileEnrichedView'
 import OnboardingModal from '../components/profile/OnboardingModal'
-import { Pencil, LogOut } from 'lucide-react'
+import { Pencil, LogOut, Award, Loader2 } from 'lucide-react'
 
 export default function ProfilePage() {
   const { id } = useParams()
@@ -23,6 +23,10 @@ export default function ProfilePage() {
     fetchingStructure,
     isEditing,
     setIsEditing,
+    isFullView,
+    loadingFull,
+    fetchFullProfile,
+    fullProfileData,
     hasProfile,
     showOnboarding,
     sections,
@@ -158,7 +162,35 @@ export default function ProfilePage() {
         <>
           <ProfileInfoRead user={user} profileData={profileData} />
           <ProfileAcademicRead profileData={profileData} sections={sections} />
-          {isOwnProfile && <ProfileEnrichedView userId={authUser?.uid ?? ''} />}
+          {isOwnProfile && (
+            <div key="profile-actions" className="space-y-4">
+              {!isFullView && (
+                <button
+                  onClick={fetchFullProfile}
+                  disabled={loadingFull}
+                  className="w-full py-3 text-sm font-medium text-white bg-[#b39055] rounded-lg hover:bg-[#b39055]/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {loadingFull ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Cargando...
+                    </>
+                  ) : (
+                    <>
+                      <Award size={16} />
+                      Ver vista completa
+                    </>
+                  )}
+                </button>
+              )}
+              {isFullView && (
+                <ProfileEnrichedView
+                  estadisticas={fullProfileData?.estadisticas}
+                  insignias={fullProfileData?.insignias}
+                />
+              )}
+            </div>
+          )}
         </>
       )}
     </div>

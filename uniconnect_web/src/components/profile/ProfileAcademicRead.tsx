@@ -42,10 +42,21 @@ export default function ProfileAcademicRead({ profileData, sections }: ProfileAc
 
       <div>
         <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 block">
-          Materias del semestre actual ({selectedSubjects.length})
+          Materias del semestre actual ({profileData.subjectNames?.length ?? selectedSubjects.length})
         </label>
-        {selectedSubjects.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400 text-sm">No has seleccionado materias aún</p>
+        {(profileData.subjectNames?.length ?? 0) === 0 && selectedSubjects.length === 0 ? (
+          <p className="text-gray-500 dark:text-gray-400 text-sm">No hay materias registradas</p>
+        ) : profileData.subjectNames && profileData.subjectNames.length > 0 && sections.length === 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {profileData.subjectNames.map((name, i) => (
+              <span
+                key={i}
+                className="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-sm rounded-full"
+              >
+                {name}
+              </span>
+            ))}
+          </div>
         ) : (
           <div className="space-y-2">
             {sections.map(section => {

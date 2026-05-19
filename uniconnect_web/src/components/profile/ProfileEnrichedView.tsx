@@ -1,10 +1,9 @@
-import { useState } from 'react'
 import { Users, Plus, Mail, Award } from 'lucide-react'
-import type { AcademicProfile } from '@uniconnect/shared'
-import { apiClient } from '../../main'
+import type { Estadisticas } from '@uniconnect/shared'
 
 interface ProfileEnrichedViewProps {
-  userId: string
+  estadisticas?: Estadisticas
+  insignias?: string[]
 }
 
 const STAT_CARDS = [
@@ -31,81 +30,45 @@ const STAT_CARDS = [
   },
 ]
 
-export default function ProfileEnrichedView({ userId }: ProfileEnrichedViewProps) {
-  const [profile, setProfile] = useState<AcademicProfile | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [loaded, setLoaded] = useState(false)
-
-  const handleLoad = async () => {
-    setLoading(true)
-    try {
-      const res = await apiClient.getAxiosInstance().get<AcademicProfile>(
-        `/api/users/estadisticas/${userId}?vista=completa`
-      )
-      setProfile(res.data ?? null)
-      setLoaded(true)
-    } catch {
-      // silently fail
-    } finally {
-      setLoading(false)
-    }
+export default function ProfileEnrichedView({ estadisticas, insignias }: ProfileEnrichedViewProps) {
+  if (!estadisticas && (!insignias || insignias.length === 0)) {
+    return null
   }
-
-  if (!loaded) {
-    return (
-      <button
-        onClick={handleLoad}
-        disabled={loading}
-        className="w-full py-3 text-sm font-medium text-[#002344] border border-[#002344] rounded-lg hover:bg-[#002344]/5 transition-colors disabled:opacity-50"
-      >
-        {loading ? 'Cargando...' : 'Ver vista completa'}
-      </button>
-    )
-  }
-
-  if (!profile) {
-    return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6 text-center">
-        <p className="text-gray-500 text-sm">No se pudieron cargar las estadísticas</p>
-      </div>
-    )
-  }
-
-  const stats = profile.estadisticas
-  const insignias = profile.insignias ?? []
 
   return (
     <div className="space-y-6">
-      {/* Estadísticas */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Estadísticas</h2>
-        <div className="grid grid-cols-3 gap-4">
-          {STAT_CARDS.map(card => {
-            const Icon = card.icon
-            const value = stats?.[card.key] ?? 0
-            return (
-              <div
-                key={card.key}
-                className="rounded-xl p-4 flex flex-col items-center gap-2"
-                style={{ backgroundColor: card.bg }}
-              >
-                <Icon size={24} style={{ color: card.color }} />
-                <p className="text-2xl font-bold" style={{ color: card.color }}>{value}</p>
-                <p className="text-xs text-gray-600 text-center">{card.label}</p>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Insignias */}
-      {insignias.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Award size={20} className="text-[#b39055]" />
-            Insignias
+      {estadisticas && (
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 text-center">
+            Estadísticas de Participación
           </h2>
-          <div className="flex flex-wrap gap-3">
+          <div className="grid grid-cols-3 gap-4">
+            {STAT_CARDS.map(card => {
+              const Icon = card.icon
+              const value = estadisticas[card.key] ?? 0
+              return (
+                <div
+                  key={card.key}
+                  className="rounded-xl p-4 flex flex-col items-center gap-2"
+                  style={{ backgroundColor: card.bg }}
+                >
+                  <Icon size={24} style={{ color: card.color }} />
+                  <p className="text-2xl font-bold" style={{ color: card.color }}>{value}</p>
+                  <p className="text-xs text-gray-600 text-center">{card.label}</p>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {insignias && insignias.length > 0 && (
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center justify-center gap-2">
+            <Award size={20} className="text-[#b39055]" />
+            Logros e Insignias
+          </h2>
+          <div className="flex flex-wrap gap-3 justify-center">
             {insignias.map((badge, i) => (
               <span
                 key={i}
@@ -117,13 +80,6 @@ export default function ProfileEnrichedView({ userId }: ProfileEnrichedViewProps
               </span>
             ))}
           </div>
-        </div>
-      )}
-
-      {insignias.length === 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6 text-center">
-          <Award size={32} className="text-gray-300 mx-auto mb-2" />
-          <p className="text-gray-500 text-sm">Aún no tienes insignias. ¡Sigue participando!</p>
         </div>
       )}
     </div>

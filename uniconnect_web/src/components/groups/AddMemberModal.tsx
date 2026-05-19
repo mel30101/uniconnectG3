@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { X, Search, UserPlus } from 'lucide-react'
 import { apiClient, searchApi, groupApi } from '../../main'
 import Avatar from '../Avatar'
-import type { User } from '@uniconnect/shared'
 
 interface AddMemberModalProps {
   groupId: string
@@ -13,9 +12,16 @@ interface AddMemberModalProps {
   onAdded: () => void
 }
 
+interface SearchResult {
+  id: string
+  uid?: string
+  name: string
+  email?: string
+}
+
 export default function AddMemberModal({ groupId, subjectId, currentUserId, members, onClose, onAdded }: AddMemberModalProps) {
   const [search, setSearch] = useState('')
-  const [students, setStudents] = useState<User[]>([])
+  const [students, setStudents] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState<string | null>(null)
 
@@ -30,8 +36,19 @@ export default function AddMemberModal({ groupId, subjectId, currentUserId, memb
         if (search.length >= 2) params.name = search
 
         const res = await searchApi.searchStudents(params)
-        setStudents(res.data ?? [])
-      } catch {
+        // Backend returns raw array directly, not wrapped in { data: [...] }
+        const list = Array.isArray(res) ? res : Array.isArray((res as any)?.data) ? (res as any).data : []
+        // Map id/uid and filter out current members
+        const memberIds = new Set(members.map(m => m.id))
+        const mapped = list.map((u: any) => ({
+          id: u.id || u.uid,
+          uid: u.uid || u.id,
+          name: u.name,
+          email: u.email,
+        })).filter((s: SearchResult) => !memberIds.has(s.id))
+        setStudents(mapped)
+      } catch (e) {
+        console.error('AddMemberModal load error:', e)
         setStudents([])
       } finally {
         setLoading(false)
@@ -40,14 +57,12 @@ export default function AddMemberModal({ groupId, subjectId, currentUserId, memb
 
     const timer = setTimeout(load, 300)
     return () => clearTimeout(timer)
-  }, [search, subjectId, currentUserId])
+  }, [search, subjectId, currentUserId, members])
 
-  const isMember = (uid: string) => members.some(m => m.id === uid)
-
-  const handleAdd = async (userId: string) => {
-    setSubmitting(userId)
+  const handleAdd = async (student: SearchResult) => {
+    setSubmitting(student.id)
     try {
-      await groupApi.addMember(groupId, userId, 'student')
+      await groupApi.addMember(groupId, student.id, 'student')
       onAdded()
     } catch {
       alert('No se pudo añadir al miembro')
@@ -93,44 +108,39 @@ export default function AddMemberModal({ groupId, subjectId, currentUserId, memb
           )}
 
           {!loading && students.length === 0 && (
-            <p className="text-center text-gray-400 text-sm py-8">No se encontraron estudiantes</p>
+            <p className="text-center text-gray-400 text-sm py-8">
+              {search ? 'No se encontraron estudiantes' : 'No hay estudiantes disponibles para esta materia'}
+            </p>
           )}
 
           <div className="space-y-2">
-            {students.map(student => {
-              const member = isMember(student.uid)
-              return (
-                <div
-                  key={student.uid}
-                  className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
-                    member ? 'bg-gray-50 opacity-60' : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <Avatar name={student.name} size="sm" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{student.name}</p>
+            {students.map(student => (
+              <div
+                key={student.id}
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Avatar name={student.name} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{student.name}</p>
+                  {student.email && (
                     <p className="text-xs text-gray-500 truncate">{student.email}</p>
-                  </div>
-                  {member ? (
-                    <span className="text-xs text-gray-400 font-medium">Ya es miembro</span>
-                  ) : (
-                    <button
-                      onClick={() => handleAdd(student.uid)}
-                      disabled={submitting === student.uid}
-                      className="flex items-center gap-1 px-3 py-1.5 text-xs bg-[#002344] text-white rounded-lg hover:bg-[#002344]/90 transition-colors disabled:opacity-50"
-                    >
-                      {submitting === student.uid ? (
-                        <div className="animate-spin rounded-full h-3 w-3 border-b border-white" />
-                      ) : (
-                        <>
-                          <UserPlus size={12} /> Añadir
-                        </>
-                      )}
-                    </button>
                   )}
                 </div>
-              )
-            })}
+                <button
+                  onClick={() => handleAdd(student)}
+                  disabled={submitting === student.id}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs bg-[#002344] text-white rounded-lg hover:bg-[#002344]/90 transition-colors disabled:opacity-50"
+                >
+                  {submitting === student.id ? (
+                    <div className="animate-spin rounded-full h-3 w-3 border-b border-white" />
+                  ) : (
+                    <>
+                      <UserPlus size={12} /> Añadir
+                    </>
+                  )}
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       </div>
