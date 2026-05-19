@@ -8,7 +8,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-[#F4F6F8] dark:bg-slate-900">
       <Header />
-      <main className="pt-14 px-4 pb-4 md:px-6 md:pb-6">
+      <main className="pt-20 px-4 pb-4 md:px-6 md:pb-6">
         <Outlet />
       </main>
     </div>

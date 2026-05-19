@@ -6,7 +6,6 @@ const navItems = [
   { to: '/profile', label: 'Profile', icon: User, end: false },
   { to: '/search', label: 'Search', icon: Search, end: false },
   { to: '/groups', label: 'Groups', icon: Users, end: false },
-  { to: '/events', label: 'Events', icon: Calendar, end: false },
   { to: '/chat', label: 'Chat', icon: MessageCircle, end: false },
   { to: '/academic/careers', label: 'Academic', icon: GraduationCap, end: false },
 ]

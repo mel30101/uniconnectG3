@@ -9,7 +9,6 @@ const navItems = [
   { to: '/', label: 'Inicio', end: true },
   { to: '/search', label: 'Buscar', end: false },
   { to: '/groups', label: 'Grupos', end: false },
-  { to: '/events', label: 'Eventos', end: false },
   { to: '/chat', label: 'Chats', end: false },
 ]
 
